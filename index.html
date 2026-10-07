@@ -1,3 +1,5 @@
+[Reading 45 lines from start (total: 45 lines, 0 remaining)]
+
 [Reading 21 lines from start (total: 21 lines, 0 remaining)]
 
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SK Logistics ERP — Complete Modern Prototype</title><style>
@@ -20,6 +22,28 @@ function esc(s){return String(s).replace(/'/g,'')} function demoAction(a){alert(
 function coverage(){content.innerHTML=`<div class="eyebrow">Migration Assurance</div><h1>Legacy → Modern Coverage Matrix</h1><div class="muted">Every canonical ASPX screen found in the audited functional folders is represented in this prototype.</div><div class="card" style="margin-top:18px;overflow:auto"><table class="coverage"><thead><tr><th>Legacy Screen</th><th>Functional Area</th><th>Modern Pattern</th><th>Coverage</th></tr></thead><tbody>${screens.map(x=>`<tr onclick="openScreen('${x.file}')" style="cursor:pointer"><td>${x.file}</td><td>${moduleNames[x.module]}</td><td>${x.type}</td><td>Implemented ✓</td></tr>`).join('')}</tbody></table></div>`}
 function quick(){let x=screens.find(x=>x.file==='Transactions/GenerateLR.aspx')||screens[0];openScreen(x.file)}
 document.getElementById('global').addEventListener('keydown',e=>{if(e.key==='Enter'){let q=e.target.value.toLowerCase();let r=screens.filter(x=>(x.label+' '+x.file+' '+x.actions.join(' ')).toLowerCase().includes(q)).slice(0,30);content.innerHTML=`<div class="eyebrow">Global Search</div><h1>${r.length} matching screens</h1><div class="screenGrid">${r.map(card).join('')}</div>`}});home();
-</script></body></html>
+</script><style>
+:root{--sk-orange:#f0a020;--sk-teal:#2a9d8f;--sk-dark:#17212b;--sk-page:#f6f7f9}
+.sk-command{display:grid;gap:16px}.sk-hero{background:linear-gradient(135deg,#17212b,#263746);color:#fff;-border-radius:16px;padding:22px;display:flex;justify-content:space-between;gap:16px}.sk-hero h2{margin:4px 0;font-size:25px}.sk-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.sk-actions button,.sk-quick button{border:1px solid #e6e9ed;background:#fff;border-radius:9px;padding:10px 12px;font-weight:700;cursor:pointer}.sk-actions button:first-child{background:#f0a020;border-color:#f0a020}.sk-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.sk-kpi,.sk-panel{background:#fff;border:1px solid #e6e9ed;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(20,30,50,.04)}.sk-kpi b{display:block;font-size:24px;margin:5px 0}.sk-kpi small,.sk-muted{color:#6b7685}.sk-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:14px}.sk-flow{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}.sk-step{background:#f1f3f5;border-radius:8px;padding:10px 6px;text-align:center;font-size:11px;font-weight:700}.sk-step.done{background:#e0f5ec;color:#1c8a5e}.sk-step.live{background:#fdebc9;color:#9a5c00}.sk-quick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.sk-quick button{text-align:left}.sk-quick button:hover{border-color:#f0a020;background:#fffaf0}.sk-table{width:100%;border-collapse:collapse}.sk-table th,.sk-table td{padding:10px 8px;border-bottom:1px solid #edf0f2;text-align:left;font-size:12px}.sk-table tbody tr{cursor:pointer}.sk-table tbody tr:hover{background:#fafbfc}
+@media(max-width:900px){.sk-kpis{grid-template-columns:repeat(2,1fr)}.sk-grid{grid-template-columns:1fr}.sk-flow{grid-template-columns:repeat(3,1fr)}}@media(max-width:600px){.sk-kpis{grid-template-columns:1fr}.sk-hero{flex-direction:column}.sk-quick{grid-template-columns:1fr 1fr}}
+</style>
+<script>
+function skOpen(name){var s=(window.screens||[]).find(function(x){return x.screen===name});if(!s)return; if(typeof openScreen==='function')openScreen(s);else if(typeof renderScreen==='function')renderScreen(s);}
+function skDashboard(){
+ var host=document.querySelector('main')||document.querySelector('.content')||document.querySelector('#content'); if(!host||document.getElementById('skCommand'))return;
+ Array.from(host.children).forEach(function(x){x.style.display='none'});
+ var d=document.createElement('section');d.id='skCommand';d.className='sk-command';
+ d.innerHTML='<div class="sk-hero"><div><small>SK LOGISTICS • OPERATIONS CONTROL</small><h2>Logistics Command Center</h2><div style="color:#cbd5df">Road, rail, warehouse, fleet and finance operations in one workspace.</div></div><div class="sk-actions"><button onclick="skOpen(\'InitiateOrder\')">+ New Order</button><button onclick="skOpen(\'GenerateLR\')">Generate LR</button><button onclick="skOpen(\'DeliveryChallan\')">Delivery Challan</button></div></div>',
+ '<div class="sk-kpis"><div class="sk-kpi"><small>Today\'s Consignments</small><b>128</b><small>▲ 12.4% vs yesterday</small></div><div class="sk-kpi"><small>LR Awaiting POD</small><b>34</b><small>7need attention</small></div><div class="sk-kpi"><small>Fleet On Trip</small><b>47</b><small>11 vehicles available</small></div><div class="sk-kpi"><small>Receivables</small><b>₩28.6L</b><small>₹4.2L overdue</small></div></div>',
+ '<div class="sk-panel"><h3>Order ‒ Cash Control Flow</h3><div class="sk-flow"><div class="sk-step done">Order<br>Confirmed</div><div class="sk-step done">VP / Vehicle<br>Planned</div><div class="sk-step live">LR<br>Generated</div><div class="sk-step">DC / Dispatch</div><div class="sk-step">POD / Ack</div><div class="sk-step">Bill / Payment</div></div></div>'+
+ '<div class="sk-grid"><div class="sk-panel"><h3>Active Operations</h3><table class="sk-table"><thead><tr><th>LR / Order</th><th>Customer</th><th>Lane</th><th>Mode</th><th>Status</th></tr></thead><tbody><tr onclick="skOpen(\'GenerateLR\')"><td>LR-10482</td><td>Tata Steel</td><td>Mumbai → Jalgaon</td><td>Road</td><td>In Transit</td></tr><tr onclick="skOpen(\'VPLoading\')"><td>VP-0284</td><td>JSW Steel</td><td>Kolkata → Guwahati</td><td>Rail</td><td>Loading</td></tr><tr onclick="skOpen(\'DCAcknowledgment\')"><td>DC-7812</td><td>ACC Cement</td><td>Pune → Nashik</td><td>Road</td><td>Awaiting POD</td></tr></tbody></table></div>'+
+ '<div class="sk-panel"><h3>Quick Operations</h3><div class="sk-quick"><button onclick="skOpen(\'OrderConfirmation\')">Order Confirmation</button><button onclick="skOpen(\'VPPlanning\')">VP Planning</button><button onclick="skOpen(\'GenerateLR\')">Generate LR</button><button onclick="skOpen(\'GRN\')">Receive GRN</button><button onclick="skOpen(\'GenerateJobCard\')">Job Card</button><button onclick="skOpen(\'LRToBillGeneration\')">Generate Bill</button></div></div></div>';
+ host.prepend(d);
+}
+window.addEventListener('load,function(){setTimeout(skDashboard,300)});
+</script>
+</body></html>
+
+[executed on device: server.tejum.cloud (240eb79a-7465-4cb0-81f3-049e98b7fd6d)]
 
 [executed on device: server.tejum.cloud (240eb79a-7465-4cb0-81f3-049e98b7fd6d)]
