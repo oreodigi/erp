@@ -299,6 +299,9 @@ export const A = {
     let lr: any;
     M((db) => {
       lr = rep(db, 'lrs', id, (l) => { l.status = 'Delivered'; l.delivery = d; return l; });
+      const lp=(db as any).loadPlans?.find((p:any)=>p.id===lr.loadPlanId||(p.orderIds||[]).includes(lr.orderId));
+      if(lp){lp.status='Delivered';lp.deliveryStatus='Delivered';lp.deliveredAt=iso();lp.deliveryLrId=lr.id;}
+      if(lr.orderId){const o=db.orders.find((x:any)=>x.id===lr.orderId);if(o){o.loadPlanStatus=lp?'Delivered':o.loadPlanStatus;o.deliveryStatus='Delivered';o.deliveredAt=iso();}}
       lrEvent(db, id, 'Delivered at consignee');
       act(db, 'LR delivered', lr.lrNo, 'lr', id);
     });
@@ -308,6 +311,9 @@ export const A = {
     let lr: any;
     M((db) => {
       lr = rep(db, 'lrs', id, (l) => { l.ack = { ...d, at: iso(), by: me() }; if (l.status !== 'Delivered') { l.status = 'Delivered'; l.delivery = l.delivery || { date: d.receivedDate, time: d.receivedTime, remark: 'Delivered (per POD)', unloading: 0 }; } (d.items || []).forEach((it: any) => { if (l.items[it.idx]) l.items[it.idx].damage = it.damage; }); return l; });
+      const lp=(db as any).loadPlans?.find((p:any)=>p.id===lr.loadPlanId||(p.orderIds||[]).includes(lr.orderId));
+      if(lp){lp.status='POD Received';lp.podStatus='Received';lp.podReceivedAt=iso();lp.podLrId=lr.id;}
+      if(lr.orderId){const o=db.orders.find((x:any)=>x.id===lr.orderId);if(o){o.loadPlanStatus=lp?'POD Received':o.loadPlanStatus;o.deliveryStatus='POD Received';o.podReceivedAt=iso();}}
       lrEvent(db, id, 'POD / acknowledgment received');
       act(db, 'POD received', lr.lrNo, 'lr', id, 'Operations');
     });
