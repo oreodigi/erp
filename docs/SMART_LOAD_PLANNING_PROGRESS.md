@@ -23,8 +23,10 @@ Implemented in first Stage-2 increment:
 
 Remaining Stage 2:
 - Benchmark the internal heuristic against external open-source engines on reproducible fixtures before deciding whether to add a service.
-- Reusable user-managed cargo/vehicle dimension masters instead of presets only.
-- Stronger multistop/LIFO accessibility and top-load limits.
+- DONE: Goods Master now carries dimensions, orientation, stacking layers and max top-load weight; Fleet truck form now carries loading-space dimensions and max payload.
+- Planner consumes those master values where present, with presets/fallbacks for demo records.
+- DONE: top-load weight and maximum stacking-layer constraints are enforced by the geometric validator.
+- Remaining: stronger multistop/LIFO accessibility validation.
 - Manual package rotation/reposition controls beyond coordinate editing.
 - Printable 3D loading diagram / richer loading instruction.
 - Performance fixtures for larger manifests.

@@ -1,9 +1,9 @@
 /** Smart Load Planning: deterministic, constraint-checked 3D rectangular packing baseline.
  * Coordinates and dimensions are in centimetres; mass in kilograms.
  * No claim of certified axle/stability/securement analysis. */
-export type CargoLine={id:string;name:string;qty:number;l:number;w:number;h:number;kg:number;stackable:boolean;rotate:boolean;stop:number;orderId?:string;maxTopKg?:number};
+export type CargoLine={id:string;name:string;qty:number;l:number;w:number;h:number;kg:number;stackable:boolean;rotate:boolean;stop:number;orderId?:string;maxTopKg?:number;maxLayers?:number};
 export type VehicleSpace={id:string;name:string;l:number;w:number;h:number;maxKg:number;truckId?:string};
-export type Placement={id:string;lineId:string;name:string;x:number;y:number;z:number;l:number;w:number;h:number;kg:number;stop:number;stackable:boolean;maxTopKg:number};
+export type Placement={id:string;lineId:string;name:string;x:number;y:number;z:number;l:number;w:number;h:number;kg:number;stop:number;stackable:boolean;maxTopKg:number;maxLayers:number};
 export type PackingResult={placed:Placement[];unplaced:{lineId:string;name:string;qty:number;reason:string}[];volumePct:number;weightPct:number;loadedKg:number;totalKg:number;cargoCount:number;warnings:string[]};
 const EPS=1e-6;
 const intersects=(a:Placement,b:Placement)=>a.x<b.x+b.l-EPS&&a.x+a.l>b.x+EPS&&a.y<b.y+b.w-EPS&&a.y+a.w>b.y+EPS&&a.z<b.z+b.h-EPS&&a.z+a.h>b.z+EPS;
@@ -20,6 +20,8 @@ export function validatePlacement(p:Placement,placed:Placement[],v:VehicleSpace)
    if(support<p.l*p.w*0.99)errors.push('Insufficient support under package');
    if(below.some(q=>!q.stackable))errors.push('Stacking on non-stackable cargo');
    if(below.some(q=>p.kg>q.maxTopKg))errors.push('Top-load weight limit exceeded');
+   const layer=1+Math.max(0,...below.map(q=>Math.round(q.z/Math.max(q.h,EPS))+1));
+   if(below.some(q=>layer>q.maxLayers))errors.push('Maximum stacking layers exceeded');
  }
  return errors;
 }
@@ -45,7 +47,7 @@ export function optimizeLoad(lines:CargoLine[],vehicle:VehicleSpace):PackingResu
   for(const [x,y,z] of candidates){
    const key=[x,y,z].join(':');if(seen.has(key))continue;seen.add(key);
    for(const [l,w,h] of orientations(line)){
-    const p:Placement={id:line.id+'-'+i,lineId:line.id,name:line.name,x,y,z,l,w,h,kg:line.kg,stop:line.stop,stackable:line.stackable,maxTopKg:line.maxTopKg??(line.stackable?100000:0)};
+    const p:Placement={id:line.id+'-'+i,lineId:line.id,name:line.name,x,y,z,l,w,h,kg:line.kg,stop:line.stop,stackable:line.stackable,maxTopKg:line.maxTopKg??(line.stackable?100000:0),maxLayers:line.maxLayers??(line.stackable?99:1)};
     if(validatePlacement(p,placed,vehicle).length)continue;
     const s=z*1000000+x*1000+y+Math.max(0,10-line.stop)*0.001;
     if(s<score){best=p;score=s;}
