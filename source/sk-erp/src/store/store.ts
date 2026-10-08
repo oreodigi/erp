@@ -239,7 +239,7 @@ export const A = {
     toast(`${rec.orderNo} created`, 'ok', 'Sent to Order Confirmation');
     return rec;
   },
-  updateOrder(id: string, d: any) { M((db) => rep(db, 'orders', id, (o) => ({ ...o, ...d }))); toast('Order updated'); },
+  updateOrder(id: string, d: any) { let blocked='';M((db) => {const o=db.orders.find((x:any)=>x.id===id);if(!o)return;const lp=(db as any).loadPlans?.find((p:any)=>p.id===o.loadPlanId||(p.orderIds||[]).includes(id));if(lp&&lp.status!=='Draft'){const keys=['clientId','fromBranchId','toBranchId','cityId','orderBy','truckQty','items'];if(keys.some(k=>JSON.stringify(o[k])!==JSON.stringify(d[k]))){blocked='Operational order fields are locked by approved load plan '+lp.planNo;return;}}rep(db,'orders',id,(x)=>({...x,...d}));});if(blocked)return toast(blocked,'bad');toast('Order updated'); },
   confirmOrder(id: string, d: any, status: 'Confirmed' | 'Rejected') {
     let no = '';
     M((db) => rep(db, 'orders', id, (o) => { no = o.orderNo; Object.assign(o, d, { status, confirmedAt: iso() }); if (d.items) o.items = d.items.map((i: any) => ({ ...i, remaining: i.remaining ?? i.qty })); if (d.truckQty != null) o.remainingTruckQty = d.truckQty; o.events.push({ at: iso(), label: status === 'Confirmed' ? 'Order confirmed' : `Order rejected${d.reason ? ' – ' + d.reason : ''}`, by: me() }); act(db, `Order ${status.toLowerCase()}`, o.orderNo, 'order', o.id); return o; }));
@@ -249,8 +249,9 @@ export const A = {
 
   // ---- LR
   saveLR(d: any, finalise: boolean) {
-    let rec: any;
+    let rec: any; let blocked='';
     M((db) => {
+      if(d.id){const old=db.lrs.find((x:any)=>x.id===d.id);const lp=old&&(db as any).loadPlans?.find((p:any)=>p.id===old.loadPlanId||(p.orderIds||[]).includes(old.orderId));if(old&&(old.status==='In Transit'||old.status==='Delivered'||old.ack||old.billId)){blocked='Dispatched/delivered/billed LR operational fields are locked';rec=old;return;}if(lp&&lp.status!=='Draft'){const keys=['orderId','items','vehicle','truckId','source','destination','sourceCity','destCity'];if(keys.some(k=>JSON.stringify(old?.[k])!==JSON.stringify(d[k]))){blocked='LR operational fields are locked by approved load plan '+lp.planNo;rec=old;return;}}}
       const isNew = !d.id;
       if (isNew) {
         const b = lookup.branch(db, d.fromBranchId);
@@ -263,7 +264,7 @@ export const A = {
           o.events.push({ at: iso(), label: `LR ${rec.lrNo} created`, by: me() });
           return o;
         });
-      } else rec = rep(db, 'lrs', d.id, (l) => ({ ...l, ...d }));
+      } else {const old=db.lrs.find((x:any)=>x.id===d.id);const lp=old&&(db as any).loadPlans?.find((p:any)=>p.id===old.loadPlanId||(p.orderIds||[]).includes(old.orderId));if(old&&(old.status==='In Transit'||old.status==='Delivered'||old.ack||old.billId)){rec=old;return;}if(lp&&lp.status!=='Draft'){const keys=['orderId','items','vehicle','truckId','source','destination','sourceCity','destCity'];if(keys.some(k=>JSON.stringify(old?.[k])!==JSON.stringify(d[k]))){rec=old;return;}}rec = rep(db, 'lrs', d.id, (l) => ({ ...l, ...d }));}
       rep(db, 'lrs', rec.id, (l) => {
         l.isFinal = finalise || l.isFinal;
         l.status = l.isFinal ? (l.status === 'Draft' || !l.status ? 'Finalised' : l.status) : 'Draft';
@@ -274,6 +275,7 @@ export const A = {
       rec = db.lrs.find((x: any) => x.id === rec.id);
       act(db, finalise ? 'LR generated & finalised' : 'LR saved', rec.lrNo, 'lr', rec.id);
     });
+    if(blocked){toast(blocked,'bad');return rec;}
     toast(finalise ? `${rec.lrNo} finalised` : `${rec.lrNo} saved`, 'ok', finalise ? 'Ready for dispatch, GRN and billing' : 'Draft – finalise to dispatch');
     return rec;
   },
