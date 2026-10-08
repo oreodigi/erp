@@ -22,13 +22,13 @@ Implemented in first Stage-2 increment:
 - Stage-2 automated tests for vehicle recommendations, multivehicle split and report model.
 
 Remaining Stage 2:
-- IN PROGRESS: added a second internal candidate-placement heuristic and the planner now evaluates baseline + improved algorithms, selecting the result that places more cargo. External open-source engine comparison remains pending.
+- IN PROGRESS: planner now actually executes baseline + improved candidate-placement algorithms and selects the result that places more cargo. External open-source engine comparison remains pending.
 - DONE: Goods Master now carries dimensions, orientation, stacking layers and max top-load weight; Fleet truck form now carries loading-space dimensions and max payload.
 - Planner consumes those master values where present, with presets/fallbacks for demo records.
 - DONE: top-load weight and maximum stacking-layer constraints are enforced by the geometric validator.
 - DONE: multi-stop rear-door accessibility validation, loading/unloading sequences and approval blocking when later-stop cargo obstructs an earlier stop.
 - DONE: selected packages support validated floor rotation / forward rotation in addition to coordinate editing.
-- IN PROGRESS: richer visual loading instruction now includes package numbering, stop filters and clickable load/unload sequence; printable manifest remains available. A captured 3D diagram in the printout is still pending.
+- DONE: printable visual loading instruction now includes numbered top and side projections generated from validated 3D coordinates, loading sequence with XYZ positions, stop IDs, dimensions, manifest and sign-off.
 - DONE: reproducible 50/120/80-package internal benchmark fixtures with in-app runtime/utilization results. External-engine comparison remains pending.
 
 ## Stage 3 — pending
