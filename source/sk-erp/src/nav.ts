@@ -108,6 +108,24 @@ export const NAV: NavGroup[] = [
       { key: 'cust/support', label: 'Complaints & Support', icon: LifeBuoy, legacy: ['Support/CustomerComplaint'] },
     ],
   },
+  { key: 'hr', label: 'HR', icon: Users, items: [
+    { key: 'hr/employees', label: 'Employees', icon: Users },
+    { key: 'hr/leaves', label: 'Leaves', icon: CalendarRange },
+    { key: 'hr/shifts', label: 'Shift Roster', icon: Timer },
+    { key: 'hr/attendance', label: 'Attendance', icon: CheckCircle2 },
+    { key: 'hr/holidays', label: 'Holidays', icon: CalendarRange },
+    { key: 'hr/designations', label: 'Designations', icon: IdCard },
+    { key: 'hr/departments', label: 'Departments', icon: Building2 },
+    { key: 'hr/appreciation', label: 'Appreciation', icon: Sparkles },
+  ] },
+  { key: 'payroll', label: 'Payroll', icon: IndianRupee, items: [
+    { key: 'payroll/run', label: 'Payroll', icon: Wallet },
+    { key: 'payroll/salary', label: 'Employee Salary', icon: Banknote },
+    { key: 'payroll/tds', label: 'TDS', icon: FileSpreadsheet },
+    { key: 'payroll/expenses', label: 'Payroll Expenses', icon: Receipt },
+    { key: 'payroll/overtime', label: 'Overtime Request', icon: Timer },
+    { key: 'payroll/reports', label: 'Reports', icon: BarChart3 },
+  ] },
   { key: 'reports', label: 'Reports & MIS', icon: BarChart3, items: [{ key: 'reports', label: 'Reports & MIS', icon: BarChart3, legacy: ['Reports/* (42)'] }, { key: 'prints', label: 'Print Formats', icon: Printer, legacy: ['Prints/* (33)'] }] },
   { key: 'masters', label: 'Masters', icon: Database, items: [{ key: 'masters', label: 'Masters', icon: Database, legacy: ['MasterPages/* (58)'] }] },
   {
@@ -138,14 +156,14 @@ export const findItem = (key: string) => ALL_ITEMS.find((i) => i.key === key || 
 // Role → module groups (from legacy role dashboards + MenuPerRole)
 export const ROLE_GROUPS: Record<string, string[]> = {
   SA: NAV.map((g) => g.key),
-  AD: ['home', 'comms', 'comms-admin', 'ops', 'fleet', 'rail', 'wh', 'cust', 'reports', 'masters', 'access', 'admin'],
+  AD: ['home', 'comms', 'comms-admin', 'ops', 'fleet', 'rail', 'wh', 'cust', 'hr', 'payroll', 'reports', 'masters', 'access', 'admin'],
   OP: ['home', 'comms', 'ops', 'fleet', 'rail', 'wh', 'cust', 'reports'],
   BU: ['home', 'comms', 'ops', 'rail', 'wh', 'reports'],
-  AC: ['home', 'comms', 'fin', 'cust', 'reports'],
+  AC: ['home', 'comms', 'fin', 'cust', 'payroll', 'reports'],
   CC: ['home', 'comms', 'ops', 'cust', 'reports'],
   CO: ['home', 'comms', 'fleet', 'ws', 'reports'],
   SI: ['home', 'comms', 'ws', 'reports'],
-  HR: ['home', 'comms', 'masters', 'access'],
+  HR: ['home', 'comms', 'hr', 'payroll', 'masters', 'access'],
 };
 
 

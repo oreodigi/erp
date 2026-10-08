@@ -21,6 +21,7 @@ import { ReportsHub } from './features/reports';
 import { MastersHub, CrudPage, DEFS } from './features/masters';
 import { Users, Roles, ChangePassword, CredentialAdministration, Corrections, Announcements, ExcelImport, LRBarcodes, Settings, PrintGallery, LegacyMap } from './features/admin';
 import { Communication, CommunicationTasks, CommunicationEnquiries, CommunicationAudit } from './features/communication';
+import { Employees, Leaves, ShiftRoster, Attendance, Holidays, Designations, Departments, Appreciation, Payroll, EmployeeSalary, TDS, PayrollExpenses, OvertimeRequests, PayrollReports } from './features/hr';
 
 export const PAGES: Record<string, React.ComponentType> = {
   dashboard: Home,
@@ -38,6 +39,8 @@ export const PAGES: Record<string, React.ComponentType> = {
   'fin/cash-plan': CashPlan, 'fin/billing': Billing, 'fin/receivables': Receivables, 'fin/client-payments': ClientPayments, 'fin/tp-slips': TPSlips, 'fin/tp-approval': TPApproval, 'fin/dc-approval': DCApproval, 'fin/dc-payslip': DCPayslips, 'fin/hamali': Hamali, 'fin/ledger': Ledger, 'fin/freight-update': FreightUpdate, 'fin/tally': Tally,
   'ws/checklist': TruckChecklist, 'ws/jobcards': JobCards, 'ws/jobcard-approval': JobCardApproval, 'ws/stock': SparesStock, 'ws/spares': SparesMaster, 'ws/suppliers': Suppliers, 'ws/po': PurchaseOrders, 'ws/po-approval': POApproval, 'ws/inward': Inward, 'ws/replacement': Replacement, 'ws/service-bills': ServiceBills, 'ws/service-payments': ServicePayments,
   'cust/360': Customer360, 'cust/agreements': Agreements, 'cust/rate-contracts': RateContracts, 'cust/transporter-rates': TransporterRates, 'cust/hamali-rates': HamaliRates, 'cust/documents': Documents, 'cust/support': Support,
+  'hr/employees': Employees, 'hr/leaves': Leaves, 'hr/shifts': ShiftRoster, 'hr/attendance': Attendance, 'hr/holidays': Holidays, 'hr/designations': Designations, 'hr/departments': Departments, 'hr/appreciation': Appreciation,
+  'payroll/run': Payroll, 'payroll/salary': EmployeeSalary, 'payroll/tds': TDS, 'payroll/expenses': PayrollExpenses, 'payroll/overtime': OvertimeRequests, 'payroll/reports': PayrollReports,
   reports: ReportsHub, prints: PrintGallery, masters: MastersHub,
   'access/users': Users, 'access/roles': Roles, 'access/password': ChangePassword,
   'access/credentials': CredentialAdministration,
