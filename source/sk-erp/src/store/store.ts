@@ -278,8 +278,9 @@ export const A = {
     return rec;
   },
   dispatchLR(id: string, d: { truckId?: string; driverId?: string; openingKm?: number; advance?: number }) {
-    let lr: any;
+    let lr: any; let blocked='';
     M((db) => {
+      const existing=db.lrs.find((x:any)=>x.id===id);if(!existing){blocked='LR not found';return;}if(existing.status==='In Transit'||existing.tripId){blocked='LR is already dispatched';return;}if(existing.status!=='Finalised'){blocked='Only a finalised LR can be dispatched';return;}const linked=(db as any).loadPlans?.find((p:any)=>p.id===existing.loadPlanId||(p.orderIds||[]).includes(existing.orderId));if(linked&&(linked.status!=='Loading Confirmed'||Number(linked.loadingVerification?.variance||0)!==0||!linked.loadingVerification?.supervisor)){blocked='Smart Load Plan is not ready for dispatch';return;}if(linked?.vehicle?.truckId&&d.truckId!==linked.vehicle.truckId){blocked='Selected truck does not match the approved load plan';return;}
       lr = rep(db, 'lrs', id, (l) => { Object.assign(l, d); l.status = 'In Transit'; l.outDate = l.outDate || ymd(); l.outTime = hm(); return l; });
       if (lr.vehicle === 'Own' && lr.truckId) {
         const truck = lookup.truck(db, lr.truckId);
@@ -293,11 +294,13 @@ export const A = {
       lrEvent(db, id, `Dispatched – ${lookup.truckNo(db, lr.truckId)}`);
       act(db, 'LR dispatched', lr.lrNo, 'lr', id);
     });
+    if(blocked){toast(blocked,'bad');return false;}
     toast(`${lr.lrNo} dispatched`, 'ok', lr.vehicle === 'Own' ? 'Trip opened in Road Fleet' : undefined);
   },
   deliverLR(id: string, d: any) {
-    let lr: any;
+    let lr: any; let blocked='';
     M((db) => {
+      const existing=db.lrs.find((x:any)=>x.id===id);if(!existing){blocked='LR not found';return;}if(existing.status==='Delivered'){blocked='LR is already delivered';return;}if(existing.status!=='In Transit'){blocked='Dispatch the LR before recording delivery';return;}
       lr = rep(db, 'lrs', id, (l) => { l.status = 'Delivered'; l.delivery = d; return l; });
       const lp=(db as any).loadPlans?.find((p:any)=>p.id===lr.loadPlanId||(p.orderIds||[]).includes(lr.orderId));
       if(lp){lp.status='Delivered';lp.deliveryStatus='Delivered';lp.deliveredAt=iso();lp.deliveryLrId=lr.id;}
@@ -305,11 +308,13 @@ export const A = {
       lrEvent(db, id, 'Delivered at consignee');
       act(db, 'LR delivered', lr.lrNo, 'lr', id);
     });
+    if(blocked){toast(blocked,'bad');return false;}
     toast(`${lr.lrNo} marked delivered`, 'ok', 'Awaiting POD for billing');
   },
   receiveAck(id: string, d: any) {
-    let lr: any;
+    let lr: any; let blocked='';
     M((db) => {
+      const existing=db.lrs.find((x:any)=>x.id===id);if(!existing){blocked='LR not found';return;}if(existing.ack){blocked='POD is already recorded';return;}if(existing.status!=='Delivered'){blocked='Record delivery before POD';return;}
       lr = rep(db, 'lrs', id, (l) => { l.ack = { ...d, at: iso(), by: me() }; if (l.status !== 'Delivered') { l.status = 'Delivered'; l.delivery = l.delivery || { date: d.receivedDate, time: d.receivedTime, remark: 'Delivered (per POD)', unloading: 0 }; } (d.items || []).forEach((it: any) => { if (l.items[it.idx]) l.items[it.idx].damage = it.damage; }); return l; });
       const lp=(db as any).loadPlans?.find((p:any)=>p.id===lr.loadPlanId||(p.orderIds||[]).includes(lr.orderId));
       if(lp){lp.status='POD Received';lp.podStatus='Received';lp.podReceivedAt=iso();lp.podLrId=lr.id;}
@@ -317,9 +322,10 @@ export const A = {
       lrEvent(db, id, 'POD / acknowledgment received');
       act(db, 'POD received', lr.lrNo, 'lr', id, 'Operations');
     });
+    if(blocked){toast(blocked,'bad');return false;}
     toast(`POD recorded for ${lr.lrNo}`, 'ok', 'LR is now eligible for billing');
   },
-  removeAck(id: string) { M((db) => { rep(db, 'lrs', id, (l) => { l.ack = null; return l; }); lrEvent(db, id, 'POD entry deleted'); }); toast('Acknowledgment deleted', 'info'); },
+  removeAck(id: string) { let blocked='';M((db) => {const lr=db.lrs.find((x:any)=>x.id===id);if(!lr)return;if(lr.billId){blocked='Delete the bill before removing POD';return;}rep(db, 'lrs', id, (l) => { l.ack = null; return l; });const lp=(db as any).loadPlans?.find((p:any)=>p.id===lr.loadPlanId||(p.orderIds||[]).includes(lr.orderId));if(lp){lp.status='Delivered';lp.podStatus='Pending';lp.podReceivedAt='';lp.podLrId='';}if(lr.orderId){const o=db.orders.find((x:any)=>x.id===lr.orderId);if(o){o.loadPlanStatus=lp?'Delivered':o.loadPlanStatus;o.deliveryStatus='Delivered';o.podReceivedAt='';}}lrEvent(db, id, 'POD entry deleted'); });if(blocked)return toast(blocked,'bad');toast('Acknowledgment deleted', 'info'); },
 
   // ---- GRN (rail head)
   createGRN(d: any) {
