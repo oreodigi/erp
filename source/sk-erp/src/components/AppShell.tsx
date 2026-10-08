@@ -4,12 +4,13 @@ import { workCount } from '../features/work';
 import { useUI, useDB, A, lookup, getAuthenticatedRoleCode } from '../store/store';
 import { cls, ago } from '../lib/util';
 import { EMBLEM } from '../assets';
-import { Search, Bell, Sun, Moon, Monitor, ChevronDown, ChevronsLeft, ChevronsRight, Menu, Home, FileText, LayoutGrid, X, LogOut, Plus, Check, Building2, Lightbulb, HelpCircle, ListChecks, Columns3, Sparkles, MessageCircle } from 'lucide-react';
+import { Search, Bell, Sun, Moon, Monitor, ChevronDown, ChevronsLeft, ChevronsRight, Menu, Home, FileText, LayoutGrid, X, LogOut, Plus, Check, Building2, Lightbulb, HelpCircle, ListChecks, Columns3, Sparkles } from 'lucide-react';
 import { Avatar } from './ui';
 import { useT } from '../lib/useT';
 import { LangButton } from './LangSwitch';
 import { logoutERP } from '../lib/api';
 import { setAuthenticatedPrincipal } from '../store/store';
+import { FloatingChat } from '../features/floating-chat';
 
 export function useRole() {
   const db = useDB();
@@ -361,15 +362,6 @@ function BottomNav() {
       )}
     </>
   );
-}
-
-function FloatingChat() {
-  const route = useUI((s) => s.route);
-  const nav = useUI((s) => s.nav);
-  const { can } = useRole();
-  if (!can('communication')) return null;
-  const active = route === 'communication' || route.startsWith('communication/');
-  return <button onClick={() => nav('communication')} aria-label="Open team chat" title="Open team chat" className={cls('fixed right-3 sm:right-5 top-1/2 -translate-y-1/2 z-[35] flex flex-row items-center justify-center gap-2 rounded-full px-4 h-11 shadow-pop border transition whitespace-nowrap', active ? 'bg-brand text-white border-brand' : 'bg-surface text-violet border-violet/40 hover:bg-violet hover:text-white')}><MessageCircle size={19} /><span className="text-[12px] font-semibold">Chat</span></button>;
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
