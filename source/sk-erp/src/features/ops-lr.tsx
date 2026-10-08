@@ -30,6 +30,7 @@ export function GenerateLR() {
   const set = (k: string, v: any) => setF((p: any) => ({ ...p, [k]: v }));
   const orders = db.orders.filter((o: any) => ['Confirmed', 'In Process'].includes(o.status));
   const orderPlan = f.orderId ? ((db as any).loadPlans||[]).find((p:any)=>(p.orderIds||[]).includes(f.orderId)) : null;
+  useEffect(()=>{if(orderPlan?.status==='Loading Confirmed'&&orderPlan.vehicle?.truckId&&!editing)setF((p:any)=>({...p,truckId:p.truckId||orderPlan.vehicle.truckId}));},[orderPlan?.id,orderPlan?.status]);
 
   const pickOrder = (id: string) => {
     const o = db.orders.find((x: any) => x.id === id);

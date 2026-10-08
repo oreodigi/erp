@@ -55,7 +55,8 @@ export function Stock() {
 
 export function StockMovement() {
   const db = useDB();
-  const { openRecord } = useUI.getState();
+  const { openRecord, nav } = useUI.getState();
+  const roadPlans:any[]=((db as any).loadPlans||[]).filter((p:any)=>['Approved','Loading Confirmed'].includes(p.status));
   const [sid, setSid] = useState('');
   const mv: any[] = [];
   db.grns.forEach((g: any) => { const l = db.lrs.find((x: any) => x.id === g.lrId); if (sid && l?.scheduleId !== sid) return; mv.push({ id: g.id, at: g.createdAt, dir: 'In', stage: 'GRN at rail head', ref: g.grnNo, l, qty: sum(g.items, (i: any) => i.received), where: 'Jalgaon godown · gate ' + g.gateNo }); });
@@ -84,13 +85,15 @@ export function StockMovement() {
 
 export function LoadingVerification() {
   const db = useDB();
-  const { openRecord } = useUI.getState();
+  const { openRecord, nav } = useUI.getState();
+  const roadPlans:any[]=((db as any).loadPlans||[]).filter((p:any)=>['Approved','Loading Confirmed'].includes(p.status));
   const [sid, setSid] = useState(db.schedules.find((s: any) => s.loads.length)?.id || '');
   const lrs = db.lrs.filter((l: any) => l.grnId && (!sid || l.scheduleId === sid || (!l.scheduleId && l.toBranchId === lookup.sched(db, sid)?.destId)));
   const rows = lrs.map((l: any) => { const g = db.grns.find((x: any) => x.id === l.grnId); const s = db.schedules.find((x: any) => x.loads.some((ld: any) => ld.lrId === l.id)); const loaded = s ? sum(s.loads.filter((ld: any) => ld.lrId === l.id), (ld: any) => sum(ld.items, (i: any) => i.qty)) : 0; const dmg = s ? sum(s.loads.filter((ld: any) => ld.lrId === l.id), (ld: any) => sum(ld.items, (i: any) => i.damage || 0)) : 0; const recv = sum(g.items, (i: any) => i.received); const diff = recv - loaded - dmg - sum(g.items, (i: any) => i.pending); return { id: l.id, l, booked: sum(l.items, (i: any) => i.qty), recv, loaded, dmg, pending: sum(g.items, (i: any) => i.pending), vps: s ? [...new Set(s.loads.filter((ld: any) => ld.lrId === l.id).map((ld: any) => ld.vpNo))].join(', ') : '', status: diff !== 0 ? 'Mismatch' : sum(g.items, (i: any) => i.pending) > 0 ? 'Partially loaded' : 'Verified' }; });
   return (
     <div>
       <PageHeader eyebrow="Warehouse" title="Stock loading verification" subtitle="Reconcile booked, received at GRN, loaded on VPs, damaged and pending quantities for each LR on a schedule." />
+      {roadPlans.length>0 && <Card title="Road load-plan queue" subtitle="Approved Smart Load Plans awaiting or completing physical loading" pad={false}><div className="overflow-x-auto"><table className="w-full text-[12.5px]"><thead><tr className="text-[11px] text-muted uppercase border-b border-line"><th className="text-left px-4 py-2">Plan</th><th className="text-left px-2">Order</th><th className="text-left px-2">Vehicle</th><th className="text-right px-2">Planned</th><th className="text-right px-2">Loaded</th><th className="text-right px-2">Variance</th><th className="text-left px-4">Status</th></tr></thead><tbody>{roadPlans.map((p:any)=>{const oid=p.orderIds?.[0];const o=db.orders.find((x:any)=>x.id===oid);const planned=sum(p.lines||[],(x:any)=>Number(x.qty||0));const linked=db.lrs.filter((l:any)=>l.orderId===oid&&l.loadPlanId===p.id);const loaded=p.status==='Loading Confirmed'?sum(linked,(l:any)=>Number(l.packages||0)):0;return <tr key={p.id} className="border-b border-line/60 hover:bg-surface2 cursor-pointer" onClick={()=>nav('ops/smart-load',{planId:p.id})}><td className="px-4 py-2"><DocNo>{p.planNo}</DocNo></td><td className="px-2"><DocNo>{o?.orderNo||oid}</DocNo></td><td className="px-2">{p.vehicle?.name||'—'}</td><td className="px-2 text-right tnum">{num(planned)}</td><td className="px-2 text-right tnum">{num(loaded)}</td><td className={cls('px-2 text-right tnum',loaded&&loaded!==planned?'text-warn':'')}>{loaded?num(loaded-planned):'—'}</td><td className="px-4"><StatusBadge s={p.status} tone={p.status==='Loading Confirmed'?'ok':'warn'}/></td></tr>})}</tbody></table></div></Card>}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <Card><Field label="VP schedule"><Select value={sid} onChange={(e) => setSid(e.target.value)} placeholder="All" options={db.schedules.map((s: any) => ({ value: s.id, label: `${s.rakeNo} · ${s.status}` }))} /></Field></Card>
         <KPI label="Verified" value={rows.filter((r: any) => r.status === 'Verified').length} icon={ListChecks} tone="ok" />
