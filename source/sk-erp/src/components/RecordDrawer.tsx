@@ -53,7 +53,7 @@ function LRView({ id, tab: t0, onClose }: any) {
   if (!l) return null;
   const st = lrStage(db, l);
   const loadPlan=((db as any).loadPlans||[]).find((p:any)=>p.id===l.loadPlanId||(p.orderIds||[]).includes(l.orderId));
-  const dispatchReady=!loadPlan||loadPlan.status==='Loading Confirmed';
+  const dispatchReady=!loadPlan||['Loading Confirmed','Dispatched','Delivered','POD Received','Billed','Payment Partial','Paid'].includes(loadPlan.status);
   const { steps, i } = lrStepIndex(db, l);
   const bill = l.billId ? db.bills.find((b: any) => b.id === l.billId) : null;
   const grn = db.grns.find((g: any) => g.lrId === l.id);
@@ -151,7 +151,7 @@ export function DispatchModal({ lr, onClose }: { lr: any; onClose: () => void })
   const plannedTruck=loadPlan?.vehicle?.truckId||'';
   const checks=[
     {label:'LR finalised',ok:lr.status==='Finalised'},
-    {label:'Smart Load Plan confirmed',ok:!loadPlan||loadPlan.status==='Loading Confirmed'},
+    {label:'Smart Load Plan confirmed',ok:!loadPlan||['Loading Confirmed','Dispatched','Delivered','POD Received','Billed','Payment Partial','Paid'].includes(loadPlan.status)},
     {label:'Physical quantities reconciled',ok:!loadPlan||!!loadPlan.loadingVerification?.confirmedAt&&Number(loadPlan.loadingVerification?.variance||0)===0},
     {label:'Vehicle matches load plan',ok:!plannedTruck||truckId===plannedTruck},
     {label:'Driver assigned',ok:lr.vehicle!=='Own'||!!driverId},
@@ -190,6 +190,9 @@ function OrderView({ id, onClose }: any) {
   const { nav, openRecord } = useUI.getState();
   if (!o) return null;
   const lrs = db.lrs.filter((l: any) => l.orderId === o.id);
+  const loadPlan=((db as any).loadPlans||[]).find((p:any)=>p.id===o.loadPlanId||(p.orderIds||[]).includes(o.id));
+  const planLR=lrs.find((l:any)=>l.loadPlanId===loadPlan?.id)||lrs[0];
+  const planBill=planLR?.billId?(db.bills||[]).find((b:any)=>b.id===planLR.billId):null;
   const steps = ['Initiated', 'Confirmed', 'LR in process', 'Completed'];
   const idx = { Pending: 0, Rejected: 0, Confirmed: 1, 'In Process': 2, Completed: 4, Preclosed: 4 }[o.status] ?? 0;
   return (
@@ -200,6 +203,7 @@ function OrderView({ id, onClose }: any) {
       </>}>
       <div className="p-4 sm:p-5 grid gap-4">
         <Card><WorkflowStepper steps={steps} current={idx} /></Card>
+        {loadPlan&&<Card title="ERP walkthrough" subtitle="Smart Load Planning to financial closure"><div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">{[['Load plan',loadPlan.planNo],['Loading',loadPlan.loadingVerification?.confirmedAt?'Confirmed':loadPlan.status],['LR',planLR?.lrNo||'Pending'],['Finance',loadPlan.paymentStatus==='Paid'?'Paid':planBill?.billNo||loadPlan.billingStatus||'Pending']].map(([k,v])=><div key={k} className="rounded-lg border border-line bg-surface2 p-2.5"><div className="text-[10px] uppercase tracking-wide text-muted">{k}</div><b className="text-[11.5px] block mt-1">{v}</b></div>)}</div><div className="flex flex-wrap gap-2"><button className="btn-ghost btn-sm" onClick={()=>{onClose();nav('ops/smart-load',{planId:loadPlan.id})}}>Open Smart Load Plan</button>{planLR&&<button className="btn-ghost btn-sm" onClick={()=>openRecord('lr',planLR.id)}>Open LR 360</button>}{planBill&&<button className="btn-ghost btn-sm" onClick={()=>openRecord('bill',planBill.id)}>Open Bill</button>}</div></Card>}
         <Card title="Order details"><KV cols={2} items={[['Client', lookup.custName(db, o.clientId)], ['Pickup', `${lookup.cityName(db, o.cityId)} · ${fmtDate(o.pickupDate)}`], ['From branch', lookup.branch(db, o.fromBranchId)?.name], ['To branch', lookup.branch(db, o.toBranchId)?.name], ['Order by', o.orderBy === 'Truck' ? `${o.truckQty} trucks (${o.remainingTruckQty} remaining)` : 'Item quantity'], ['Contact', `${o.personName || '—'} · ${o.personPhone || ''}`], ['Instructions', o.instructions]]} /></Card>
         <Card title="Items" pad={false}><table className="w-full text-[12.75px]"><thead><tr className="text-[11px] text-muted uppercase border-b border-line"><th className="text-left px-4 py-2">Item</th><th className="text-right px-2">Qty</th><th className="text-right px-2">Remaining</th><th className="px-4 w-32">Fulfilled</th></tr></thead><tbody>{o.items.map((it: any, k: number) => <tr key={k} className="border-b border-line/60"><td className="px-4 py-2">{it.name} <span className="text-muted">({it.unit})</span></td><td className="px-2 text-right tnum">{num(it.qty)}</td><td className="px-2 text-right tnum">{num(it.remaining)}</td><td className="px-4"><Progress value={((it.qty - it.remaining) / it.qty) * 100} tone="ok" /></td></tr>)}</tbody></table></Card>
         <Card title={`LRs against this order (${lrs.length})`} pad={false}>{lrs.length ? <ul className="divide-y divide-line">{lrs.map((l: any) => <li key={l.id}><button className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-surface2 text-left" onClick={() => openRecord('lr', l.id)}><span className="docno flex-1">{l.lrNo}</span><span className="text-[12px] text-muted">{l.destination}</span><StatusBadge s={lrStage(db, l)} /></button></li>)}</ul> : <div className="p-4 text-[13px] text-muted">No LR generated yet.</div>}</Card>
