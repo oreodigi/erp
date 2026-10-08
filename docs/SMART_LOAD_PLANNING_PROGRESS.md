@@ -1,22 +1,36 @@
 # Smart Load Planning — Progress
 Started: 9 October 2026.
+
 ## Final technology
-Original TypeScript 3D packing heuristic and independent validator; Three.js / React Three Fiber / Drei for interactive rendering. Benchmark candidates: skjolber/3d-bin-container-packing (Apache-2.0) and fontanf/packingsolver (MIT). No commercial code or unverified GitHub algorithm copied.
-## Stage 1 implemented
-- Operations > Smart Load Planning route (also simple Bookings menu).
-- ERP Order row action > Smart Load Plan.
-- Existing Orders, Goods master and Fleet selections integrated.
-- Editable manifest, vehicle geometry, automatic 3D packing, utilization, exceptions.
-- Interactive 3D viewer and validated coordinate edits.
-- Shared ERP state saved/reopened plans; plan approval and loading-confirmed status.
-- Downstream VP Loading and LR navigation (not yet automated cross-module status changes).
-## Validation
-- PASS: automated engine fixtures for fit, oversize, payload, nonstack, rotation, collision, support and >500 item handling.
-- PASS: TypeScript + Vite production build (nonfatal large-chunk warning).
-- Browser end-to-end verification of authenticated workflow remains pending.
-## Remaining stages
-Stage 2: benchmark engines, cargo/vehicle masters, printable reports, multivehicle and robust constraints.
-Stage 3: synchronized VP, Warehouse, LR/DC and Dispatch gating; actual load verification.
-Stage 4: multistop accessibility, palletization and advanced weight distribution.
+Original TypeScript 3D packing heuristic and independent validator; Three.js / React Three Fiber / Drei for interactive rendering. Benchmark candidates remain skjolber/3d-bin-container-packing (Apache-2.0) and fontanf/packingsolver (MIT). No commercial code copied.
+
+## Stage 1 — complete
+- Operations > Smart Load Planning route and Order > Smart Load Plan action.
+- Existing Orders, Goods master and Fleet selection.
+- Editable cargo/vehicle geometry, automatic packing, utilization and exceptions.
+- Interactive 3D viewer with validated coordinate edits.
+- Shared ERP-state save/reopen, approval and loading-confirmed status.
+- VP Loading and LR navigation.
+- Automated fit, oversize, payload, nonstack, rotation, collision, support and overflow tests.
+
+## Stage 2 — started
+Implemented in first Stage-2 increment:
+- Reusable 14/17/20/24/32 FT vehicle body templates.
+- Automatic vehicle recommendation comparing the active cargo manifest.
+- Multi-vehicle split calculation using the selected vehicle.
+- Printable Smart Load Plan with manifest, utilization, payload and supervisor sign-off.
+- Stage-2 automated tests for vehicle recommendations, multivehicle split and report model.
+
+Remaining Stage 2:
+- Benchmark the internal heuristic against external open-source engines on reproducible fixtures before deciding whether to add a service.
+- Reusable user-managed cargo/vehicle dimension masters instead of presets only.
+- Stronger multistop/LIFO accessibility and top-load limits.
+- Manual package rotation/reposition controls beyond coordinate editing.
+- Printable 3D loading diagram / richer loading instruction.
+- Performance fixtures for larger manifests.
+
+## Stage 3 — pending
+Synchronize approved plans with VP/Warehouse/LR/DC and Dispatch readiness, actual loaded quantities, exceptions and overrides.
+
 ## Operational caveat
-Goods master geometry is used where available; missing values are estimates. Vehicle interior dimensions are editable estimates. No certified axle, securement or stability analysis.
+Goods-master geometry is used where available; missing values are estimates. Vehicle interior dimensions are editable planning values. This is not certified axle, securement or stability analysis.
