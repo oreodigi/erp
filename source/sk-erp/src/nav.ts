@@ -117,6 +117,7 @@ export const NAV: NavGroup[] = [
     { key: 'marketing/deals', label: 'Deals', icon: HandCoins },
     { key: 'marketing/deal-pipeline', label: 'Deal Pipeline', icon: Columns3 },
     { key: 'marketing/quotations', label: 'Quotations', icon: FileText },
+    { key: 'marketing/handoff', label: 'Won Deal Handoff', icon: CheckCircle2 },
     { key: 'marketing/targets', label: 'Sales Targets', icon: Target },
     { key: 'marketing/performance', label: 'Sales Performance', icon: Activity },
     { key: 'marketing/reports', label: 'CRM Reports', icon: BarChart3 },
