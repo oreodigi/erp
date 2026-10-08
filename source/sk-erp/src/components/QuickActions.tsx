@@ -103,7 +103,9 @@ function billRows(db: any, lrs: any[]) {
 function BillModal({ ids, onClose }: { ids: string[]; onClose: () => void }) {
   const t = useT();
   const db = useDB();
-  const lrs = ids.map((id) => byId(db.lrs, id)).filter((l: any) => l && !l.billId);
+  const selected = ids.map((id) => byId(db.lrs, id)).filter(Boolean);
+  const lrs = selected.filter((l: any) => l && !l.billId && l.paymentMode === 'To Be Billed' && (l.ack || lookup.cust(db, l.consignorId)?.billWithoutAck));
+  const ineligible = selected.length - lrs.length;
   const groups = Object.entries(groupBy(lrs, (l: any) => l.consignorId));
   const [rate, setRate] = useState('5');
   const plan = useMemo(() => groups.map(([cid, list]) => {
@@ -125,6 +127,7 @@ function BillModal({ ids, onClose }: { ids: string[]; onClose: () => void }) {
     <Modal open onClose={onClose} title={plan.length > 1 ? t('Make {n} bills', { n: plan.length }) : t('Make bill – {name}', { name: plan[0]?.c?.name || '' })} size="md"
       footer={<><button className="btn-ghost" onClick={onClose}>{t('Cancel')}</button><button className="btn-primary" disabled={!plan.length} onClick={go}><Receipt size={15} /> {plan.length > 1 ? t('Generate {n} bills', { n: plan.length }) : t('Generate bill')}</button></>}>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
+        {ineligible>0 && <div className="rounded-lg bg-warn/10 text-warn px-3 py-2 text-[12.5px]">{t('{n} selected LR(s) skipped because they are already billed or are not yet eligible for billing.', { n: ineligible })}</div>}
         <Field label={t('GST rate')}><Segmented options={[{ key: '5', label: t('5% (GTA)') }, { key: '12', label: '12%' }, { key: '0', label: t('Exempt / RCM') }]} value={rate} onChange={(v: any) => setRate(v)} /></Field>
         {plan.map((p) => (
           <div key={p.cid} className="rounded-lg border border-line p-3 text-[13px] grid gap-1">
