@@ -16,7 +16,10 @@ export function useRole() {
   const userId = useUI((s) => s.userId);
   const user = db.users.find((u: any) => u.id === userId) || db.users[0];
   const role = db.roles.find((r: any) => r.id === user.roleId) || db.roles[0];
-  const allowed = new Set<string>([...(role.menus || []), ...(user.extraMenus || [])].filter((m) => !(user.deniedMenus || []).includes(m)));
+  // Super Admin is server-authenticated. Preserve its complete navigation even
+  // when an older shared ERP-state snapshot has incomplete role menu metadata.
+  const roleMenus = role.code === 'SA' ? NAV.flatMap((g) => g.items.map((i) => i.key)) : (role.menus || []);
+  const allowed = new Set<string>([...roleMenus, ...(user.extraMenus || [])].filter((m) => !(user.deniedMenus || []).includes(m)));
   return { user, role, allowed, can: (k: string) => allowed.has(k) || k === 'dashboard' || (!!ROUTE_ALIAS[k] && allowed.has(ROUTE_ALIAS[k])) };
 }
 

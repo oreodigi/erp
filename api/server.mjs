@@ -84,7 +84,10 @@ async function erpState(req,res,user){
   }
   if(req.method!=='PUT')return json(res,405,{error:'Method not allowed'});
   if(!stateWriteRoles.has(String(user.role).toLowerCase()))return json(res,403,{error:'Insufficient permissions'});
-  const input=await body(req,12000000),version=input?.version,data=input?.data;
+  // The shared legacy dataset is intentionally retained in PostgreSQL and is
+  // ~36 MB as JSON. Keep a bounded parser limit above that real payload so
+  // legitimate concurrent ERP saves are not truncated at 12 MB.
+  const input=await body(req,50000000),version=input?.version,data=input?.data;
   if(!Number.isSafeInteger(version)||version<1||!data||typeof data!=='object'||Array.isArray(data))return json(res,400,{error:'Invalid ERP state'});
   const c=await writePool.connect();
   try{
