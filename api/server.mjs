@@ -132,6 +132,18 @@ const server=http.createServer(async(req,res)=>{
  if(!user)return json(res,401,{error:'Unauthorized'});
  if(path==='/auth/me'&&req.method==='GET')return json(res,200,{user});
  if(path==='/auth/logout'&&req.method==='POST'){revokeSession(token);return json(res,200,{ok:true});}
+ if(path==='/auth/change-password'&&req.method==='POST'){
+  try{
+   if(!writePool)return json(res,503,{error:'Password changes unavailable'});
+   const input=await body(req,4096),current=String(input?.current_password||''),next=String(input?.new_password||'');
+   if(!current||!accountPassword(next))return json(res,400,{error:'New password must be 12-256 characters and include letters and numbers'});
+   const found=await pool.query('SELECT password_hash FROM app.users WHERE id=$1 AND active=true',[user.id]);
+   if(!found.rowCount||!verifyPassword(current,found.rows[0].password_hash))return json(res,401,{error:'Current password is incorrect'});
+   await writePool.query('UPDATE app.users SET password_hash=$1 WHERE id=$2 AND active=true',[hashPassword(next),user.id]);
+   await writePool.query('INSERT INTO app.audit_events(actor_id,entity_type,entity_id,action,after_state) VALUES($1,$2,$3,$4,$5)',[user.id,'auth_user',user.id,'password_changed',{username:user.username}]);
+   return json(res,200,{ok:true});
+  }catch(e){console.error('Password change failed',e.code||e.message);return json(res,503,{error:'Password change unavailable'});}
+ }
  if(path==='/api/dashboard'&&req.method==='GET')return dashboard(res);
  if(path==='/api/analytics'&&req.method==='GET'){
   try{

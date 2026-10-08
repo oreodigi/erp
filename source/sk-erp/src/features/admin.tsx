@@ -10,7 +10,7 @@ import { REPORTS } from './reports';
 import { DEFS } from './masters';
 import { fmtDate, fmtDT, ymd, sum, inr, cls, daysBetween, downloadText, saveMsg, now, fy } from '../lib/util';
 import { Plus, Pencil, Trash2, KeyRound, LogIn, UserCheck, UserX, Shield, Eraser, Megaphone, Upload, Barcode, Gauge, Sparkles, Printer, Eye, RotateCcw, Download, ChevronRight, ChevronsRight, ChevronLeft, ChevronsLeft, AlertTriangle, CheckCircle2, Search } from 'lucide-react';
-import { fetchAdminUsers, resetAdminUserPassword, updateAdminUser, getERPUser, type AdminAuthUser } from '../lib/api';
+import { fetchAdminUsers, resetAdminUserPassword, updateAdminUser, changeOwnPassword, getERPUser, type AdminAuthUser } from '../lib/api';
 
 export function Users() {
   const db = useDB();
@@ -118,15 +118,16 @@ export function ChangePassword() {
   const toast = useUI((s) => s.toast);
   const score = [/.{8,}/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((r) => r.test(f.pw)).length;
   const err = f.re && f.pw !== f.re ? 'Passwords do not match' : '';
+  const [busy, setBusy] = useState(false);
   return (
     <div className="max-w-lg">
       <PageHeader eyebrow="Users & Access" title="Change password" subtitle="Use at least 8 characters with a capital letter, a number and a symbol." />
-      <Card><form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); if (!f.old) return toast('Enter your current password', 'bad'); if (score < 3) return toast('Choose a stronger password', 'bad'); if (err) return toast(err, 'bad'); toast('Password changed', 'ok', 'Use it next time you sign in'); setF({ old: '', pw: '', re: '' }); }}>
+      <Card><form className="grid gap-3" onSubmit={async (e) => { e.preventDefault(); if (!f.old) return toast('Enter your current password', 'bad'); if (score < 3) return toast('Choose a stronger password', 'bad'); if (err) return toast(err, 'bad'); setBusy(true); try { await changeOwnPassword(f.old, f.pw); toast('Password changed', 'ok', 'Use it next time you sign in'); setF({ old: '', pw: '', re: '' }); } catch (e) { toast('Password change failed', 'bad', e instanceof Error ? e.message : 'Request failed'); } finally { setBusy(false); } }}>
         <Field label="Old password"><Input id="pw-old" type="password" autoComplete="current-password" value={f.old} onChange={(e) => setF({ ...f, old: e.target.value })} /></Field>
         <Field label="New password"><Input id="pw-new" type="password" autoComplete="new-password" value={f.pw} onChange={(e) => setF({ ...f, pw: e.target.value })} /></Field>
         <div className="flex gap-1">{[0, 1, 2, 3].map((i) => <span key={i} className={cls('h-1.5 flex-1 rounded-full', i < score ? (score < 3 ? 'bg-warn' : 'bg-ok') : 'bg-line')} />)}</div>
         <Field label="Re-type password" error={err}><Input id="pw-re" type="password" autoComplete="new-password" value={f.re} onChange={(e) => setF({ ...f, re: e.target.value })} /></Field>
-        <div className="flex justify-end gap-2"><button type="button" className="btn-ghost" onClick={() => setF({ old: '', pw: '', re: '' })}>Cancel</button><button type="submit" className="btn-primary">Save</button></div>
+        <div className="flex justify-end gap-2"><button type="button" className="btn-ghost" onClick={() => setF({ old: '', pw: '', re: '' })}>Cancel</button><button disabled={busy} type="submit" className="btn-primary">{busy ? 'Saving…' : 'Save'}</button></div>
       </form></Card>
     </div>
   );

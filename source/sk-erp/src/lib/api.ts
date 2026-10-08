@@ -40,6 +40,7 @@ export async function logoutERP(){
  try{sessionStorage.removeItem(TOKEN_KEY);}catch{}
  if(token)await fetch('/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+token},cache:'no-store'}).catch(()=>{});
 }
+export const changeOwnPassword=(current_password:string,new_password:string)=>apiJSON<{ok:boolean}>('/auth/change-password',{method:'POST',body:JSON.stringify({current_password,new_password})});
 
 async function apiJSON<T>(path:string,init:RequestInit={}):Promise<T>{
  if(!accessToken)throw new Error('Sign in required');
