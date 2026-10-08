@@ -479,7 +479,7 @@ export const A = {
     M((db) => {
       b = { ...d, id: uid(), billNo: d.billNo || `SKT/B/${nextNo(db, 'bill')}/${fy()}`, pending: d.net, deleted: false, createdAt: iso(), createdBy: me(), supplementary: [] };
       db.bills.push(b);
-      d.rows.forEach((r: any) => { rep(db, 'lrs', r.lrId, (l) => ({ ...l, billId: b.id })); lrEvent(db, r.lrId, `Billed on ${b.billNo}`); });
+      d.rows.forEach((r: any) => { const lr=rep(db, 'lrs', r.lrId, (l) => ({ ...l, billId: b.id })); lrEvent(db, r.lrId, `Billed on ${b.billNo}`); const lp=(db as any).loadPlans?.find((p:any)=>p.id===lr.loadPlanId||(p.orderIds||[]).includes(lr.orderId)); if(lp){lp.status='Billed';lp.billingStatus='Billed';lp.billId=b.id;lp.billNo=b.billNo;lp.billedAt=iso();} if(lr.orderId){const o=db.orders.find((x:any)=>x.id===lr.orderId);if(o){o.loadPlanStatus=lp?'Billed':o.loadPlanStatus;o.billingStatus='Billed';o.billId=b.id;o.billNo=b.billNo;o.billedAt=iso();}} });
       ledgerAdd(db, { voucherNo: `SV/${b.billNo.split('/')[2]}`, date: b.date, voucherType: 'Sales', party: 'Client', clientId: b.clientId, ledgerName: lookup.custName(db, b.clientId), particular: `Freight bill ${b.billNo}`, debit: b.net, credit: 0, refType: 'Bill', refNo: b.billNo });
       act(db, `Bill generated – ${d.rows.length} LR`, b.billNo, 'bill', b.id, 'Finance');
     });
@@ -512,6 +512,7 @@ export const A = {
       p = { ...d, id: uid(), voucherNo: `RV/${nextNo(db, 'rv')}`, createdAt: iso(), by: me() };
       db.clientPayments.push(p);
       const b = rep(db, 'bills', d.billId, (x) => ({ ...x, pending: Math.max(0, x.pending - d.received - d.tds - d.damage - d.rateDiff) }));
+      const settled=b.pending<=0; for(const r of (b.rows||[])){const lr=db.lrs.find((x:any)=>x.id===r.lrId);if(!lr)continue;const lp=(db as any).loadPlans?.find((q:any)=>q.id===lr.loadPlanId||(q.orderIds||[]).includes(lr.orderId));if(lp){lp.status=settled?'Paid':'Payment Partial';lp.paymentStatus=settled?'Paid':'Partial';lp.paidAt=settled?iso():lp.paidAt;lp.lastReceiptNo=p.voucherNo;}if(lr.orderId){const o=db.orders.find((x:any)=>x.id===lr.orderId);if(o){o.loadPlanStatus=lp?(settled?'Paid':'Payment Partial'):o.loadPlanStatus;o.paymentStatus=settled?'Paid':'Partial';o.paidAt=settled?iso():o.paidAt;}}}
       ledgerAdd(db, { voucherNo: p.voucherNo, date: d.date, voucherType: d.mode === 'Cash' ? 'Cash Receipt' : 'Bank Receipt', party: 'Client', clientId: b.clientId, ledgerName: lookup.custName(db, b.clientId), particular: `Receipt against ${b.billNo}`, debit: 0, credit: d.received + d.tds + d.damage + d.rateDiff, refType: 'Receipt', refNo: b.billNo, ledgerId: d.paidBy });
       act(db, `Payment received ₹${d.received.toLocaleString('en-IN')}`, b.billNo, 'bill', b.id, 'Finance');
     });
