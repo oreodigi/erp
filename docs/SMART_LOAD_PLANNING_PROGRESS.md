@@ -22,7 +22,7 @@ Implemented in first Stage-2 increment:
 - Stage-2 automated tests for vehicle recommendations, multivehicle split and report model.
 
 Remaining Stage 2:
-- Benchmark the internal heuristic against external open-source engines on reproducible fixtures before deciding whether to add a service.
+- IN PROGRESS: added a second internal candidate-placement heuristic and the planner now evaluates baseline + improved algorithms, selecting the result that places more cargo. External open-source engine comparison remains pending.
 - DONE: Goods Master now carries dimensions, orientation, stacking layers and max top-load weight; Fleet truck form now carries loading-space dimensions and max payload.
 - Planner consumes those master values where present, with presets/fallbacks for demo records.
 - DONE: top-load weight and maximum stacking-layer constraints are enforced by the geometric validator.

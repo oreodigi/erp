@@ -5,6 +5,7 @@ import {useDB,useUI,useStore} from '../store/store';
 import {PageHeader,Card,Field,Input,Select,StatusBadge,KPI} from '../components/ui';
 import {Truck,Boxes,Save,Play,CheckCircle2,AlertTriangle,ClipboardCheck,Plus,Trash2,Printer,Sparkles} from 'lucide-react';
 import {CargoLine,VehicleSpace,Placement,PackingResult,optimizeLoad,validatePlan,validatePlacement} from '../lib/load-planning';
+import {optimizeLoadV2,chooseBetter} from '../lib/load-planning-v2';
 import {VEHICLE_PRESETS,recommendVehicles,splitAcrossVehicles,reportHtml} from '../lib/load-planning-stage2';
 import {accessibilityIssues,loadingSequence,unloadingSequence,rotatePlacement} from '../lib/load-planning-sequence';
 import {runInternalBenchmarks} from '../lib/load-planning-benchmark';
