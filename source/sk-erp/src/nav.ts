@@ -2,7 +2,7 @@ import {
   LayoutDashboard, ClipboardList, CheckCircle2, CalendarRange, Boxes, PackagePlus, FileText, Truck, ClipboardCheck, Warehouse, PackageCheck, MapPinned, Inbox, Mail,
   Bus, Route, ScrollText, IdCard, Fuel, Receipt, Flag, Siren, TrainFront, Train, Activity, Container, FileBadge, IndianRupee, Wallet, HandCoins, BadgeCheck,
   FileSpreadsheet, BookOpen, Database, Wrench, ListChecks, Cog, Package, Store, ShoppingCart, Stamp, ArrowDownToLine, Repeat, Receipt as ReceiptIcon, Users,
-  Building2, FileSignature, Table2, Files, LifeBuoy, Megaphone, BarChart3, Printer, Layers, Shield, KeyRound, Settings, Upload, Barcode, Eraser, Gauge, AlertTriangle, ShieldCheck, Scale, Hammer, Banknote, CircleDollarSign, Sparkles, Columns3, Home, Timer, MessageCircle, HelpCircle, Target
+  Building2, FileSignature, Table2, Files, LifeBuoy, Megaphone, BarChart3, Printer, Layers, Shield, KeyRound, Settings, Upload, Barcode, Eraser, Gauge, AlertTriangle, ShieldCheck, Scale, Hammer, Banknote, CircleDollarSign, Sparkles, Columns3, Home, Timer, Settings2, MessageCircle, HelpCircle, Target
 } from 'lucide-react';
 
 export type NavItem = { key: string; label: string; icon: any; legacy?: string[]; badge?: string };
@@ -71,6 +71,7 @@ export const NAV: NavGroup[] = [
       { key: 'fin/billing', label: 'Customer Billing', icon: FileSpreadsheet, legacy: ['Accounts/LRToBillGeneration', 'LRToBillGeneration_V1', 'Prints/Bill*Print', 'Prints/Supplementary*'] },
       { key: 'fin/receivables', label: 'Receivables', icon: HandCoins, legacy: ['Reports/ClientOutstanding'] },
       { key: 'fin/client-payments', label: 'Client Payments', icon: CircleDollarSign, legacy: ['Accounts/ClientPaymentEntry'] },
+      { key: 'fin/detention', label: 'Detention Management', icon: Timer },
       { key: 'fin/tp-slips', label: 'Transporter Payables', icon: Banknote, legacy: ['Accounts/GenerateTransporterPaymentSlip', 'Prints/TransporterPaySlip'] },
       { key: 'fin/tp-approval', label: 'Transporter Approval', icon: BadgeCheck, legacy: ['Accounts/TransporterPaymentApprove', 'TransporterPaymentEntry'] },
       { key: 'fin/dc-approval', label: 'DC Approval', icon: Stamp, legacy: ['Accounts/DCApproval'] },
@@ -78,6 +79,7 @@ export const NAV: NavGroup[] = [
       { key: 'fin/hamali', label: 'Hamali Payments', icon: Hammer, legacy: ['Accounts/HamaliPaymentGRN', 'HamaliPaymentDGRN', 'HamaliPaymentVPLoading'] },
       { key: 'fin/ledger', label: 'Ledger', icon: BookOpen, legacy: ['Accounts/LedgerPaymentEntry', 'Reports/LedgerReport', 'LedgerAudit'] },
       { key: 'fin/freight-update', label: 'Update LR Freight', icon: IndianRupee, legacy: ['Accounts/UpdateLRFreight'] },
+      { key: 'fin/detention-rules', label: 'Detention Rules', icon: Settings2 },
       { key: 'fin/tally', label: 'Tally Export', icon: Database, legacy: ['Accounts/TallyXML'] },
     ],
   },
@@ -192,7 +194,7 @@ export const SIMPLE_NAV: SimpleGroup[] = [
     { key: 'ops/lr', label: 'All LRs' }, { key: 'ops/orders', label: 'Customer orders' }, { key: 'ops/pod', label: 'POD received' }] },
   { key: 's-rail', label: 'Rail', icon: TrainFront, items: [{ key: 'rail/rakes', label: 'Rakes' }, { key: 'ops/grn', label: 'Goods in at rail head' }, { key: 'ops/dc', label: 'Delivery challans' }] },
   { key: 's-fleet', label: 'Trucks', icon: Truck, items: [{ key: 'fleet/trucks', label: 'Our trucks' }, { key: 'fleet/journeys', label: 'Truck journeys', hint: 'Where each truck went, loaded or empty, and its profit' }, { key: 'fleet/trips', label: 'Trips' }, { key: 'fleet/fuel', label: 'Diesel & expenses' }, { key: 'fleet/drivers', label: 'Drivers' }] },
-  { key: 's-money', label: 'Money', icon: IndianRupee, items: [{ key: 'fin/cash-plan', label: 'Cash plan', hint: 'Money in and out for the coming weeks' }, { key: 'fin/billing', label: 'Make bills' }, { key: 'fin/receivables', label: 'Payments to collect' }, { key: 'fin/tp-slips', label: 'Pay transporters' }, { key: 'fin/ledger', label: 'Ledger' }, { key: 'fin/tally', label: 'Send to Tally' }] },
+  { key: 's-money', label: 'Money', icon: IndianRupee, items: [{ key: 'fin/cash-plan', label: 'Cash plan', hint: 'Money in and out for the coming weeks' }, { key: 'fin/billing', label: 'Make bills' }, { key: 'fin/receivables', label: 'Payments to collect' }, { key: 'fin/detention', label: 'Verify detention' }, { key: 'fin/tp-slips', label: 'Pay transporters' }, { key: 'fin/ledger', label: 'Ledger' }, { key: 'fin/tally', label: 'Send to Tally' }] },
   { key: 's-ws', label: 'Workshop', icon: Wrench, items: [{ key: 'ws/jobcards', label: 'Job cards' }, { key: 'ws/po', label: 'Buy spares' }, { key: 'ws/stock', label: 'Spares stock' }] },
   { key: 's-cust', label: 'Customers', icon: Users, items: [{ key: 'cust/360', label: 'Customers' }] },
   { key: 's-rep', label: 'Reports', icon: BarChart3, items: [{ key: 'reports', label: 'Reports' }] },
