@@ -36,3 +36,9 @@ Synchronize approved plans with VP/Warehouse/LR/DC and Dispatch readiness, actua
 
 ## Operational caveat
 Goods-master geometry is used where available; missing values are estimates. Vehicle interior dimensions are editable planning values. This is not certified axle, securement or stability analysis.
+
+## Stage 2 external-engine assessment (2026-10-09)
+- Reviewed published features, licenses and integration implications for PackingSolver (C++ MIT), 3d-bin-container-packing (Java Apache-2.0) and py3dbp (Python MIT). See `SMART_LOAD_PLANNING_ENGINE_ASSESSMENT.md`.
+- Decision: keep browser-native dual heuristic for the client demo. External engines have not been executed head-to-head; no service added.
+- In-app benchmarks now compare baseline and improved placement counts, selected result, LIFO warnings and elapsed time; candidate geometry is independently validated.
+- Stage 3 cross-module ERP synchronization remains outstanding.
