@@ -61,7 +61,9 @@ function ConfirmOrderModal({ ids, onClose }: { ids: string[]; onClose: () => voi
 function PODModal({ ids, onClose }: { ids: string[]; onClose: () => void }) {
   const t = useT();
   const db = useDB();
-  const lrs = ids.map((id) => byId(db.lrs, id)).filter(Boolean);
+  const selected = ids.map((id) => byId(db.lrs, id)).filter(Boolean);
+  const lrs = selected.filter((l: any) => l.status === 'Delivered' && !l.ack);
+  const ineligible = selected.length - lrs.length;
   const [date, setDate] = useState(ymd());
   const [damage, setDamage] = useState(0);
   const [docket, setDocket] = useState('');
@@ -79,6 +81,7 @@ function PODModal({ ids, onClose }: { ids: string[]; onClose: () => void }) {
     <Modal open onClose={onClose} title={one ? t('POD received – {no}', { no: one.lrNo }) : t('POD received for {n} LRs', { n: lrs.length })} size="sm"
       footer={<><button className="btn-ghost" onClick={onClose}>{t('Cancel')}</button><button className="btn-primary" onClick={save}><Inbox size={15} /> {t('Save POD')}</button></>}>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
+        {ineligible>0 && <div className="rounded-lg bg-warn/10 text-warn px-3 py-2 text-[12.5px]">{t('{n} selected LR(s) skipped because POD is only accepted after delivery and only once.', { n: ineligible })}</div>}
         {!one && <p className="text-[13px] text-muted">{t('All goods marked as received in full. Open an LR to record damage on it.')}</p>}
         <Field label={t('POD received on')}><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
         {one && <Field label={t('Damaged pieces (if any)')} hint={t('Total {n} pieces', { n: one.items.reduce((a: number, i: any) => a + Number(i.qty || 0), 0) })}><Input type="number" min={0} value={damage} onChange={(e) => setDamage(Number(e.target.value))} /></Field>}
