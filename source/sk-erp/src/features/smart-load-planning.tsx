@@ -1,0 +1,87 @@
+import React,{useMemo,useState,useEffect} from 'react';
+import {Canvas} from '@react-three/fiber';
+import {OrbitControls,Edges,Text} from '@react-three/drei';
+import {useDB,useUI,useStore} from '../store/store';
+import {PageHeader,Card,Field,Input,Select,StatusBadge,KPI} from '../components/ui';
+import {Truck,Boxes,Save,Play,CheckCircle2,RotateCcw,AlertTriangle,PackagePlus,ClipboardCheck,Plus,Trash2} from 'lucide-react';
+import {CargoLine,VehicleSpace,Placement,PackingResult,optimizeLoad,validatePlan,validatePlacement} from '../lib/load-planning';
+
+const demoLines:CargoLine[]=[
+ {id:'demo-pallet',name:'Steel parts pallets',qty:8,l:120,w:100,h:110,kg:620,stackable:false,rotate:false,stop:2},
+ {id:'demo-carton',name:'Industrial spare cartons',qty:18,l:65,w:45,h:42,kg:28,stackable:true,rotate:true,stop:1},
+ {id:'demo-crate',name:'Machinery wooden crates',qty:4,l:160,w:90,h:95,kg:450,stackable:false,rotate:false,stop:3},
+];
+const vehicleDefaults=(truck:any):VehicleSpace=>({id:truck?.id||'demo-vehicle',truckId:truck?.id,name:truck?.number||'32 FT Container Truck',l:975,w:235,h:245,maxKg:truck?.capacity?.includes('16')?16000:32000});
+const makeLine=(it:any,i:number,orderId:string,goods:any[]):CargoLine=>{const g=goods.find(x=>x.id===it.goodsId);return {id:'order-'+orderId+'-'+i,name:it.name||g?.name||'Cargo '+(i+1),qty:Math.max(1,Math.min(100,Number(it.qty)||1)),l:Number(g?.length)>0?Number(g.length):100,w:Number(g?.width)>0?Number(g.width):80,h:Number(g?.height)>0?Number(g.height):80,kg:Number(g?.weight)>0?Number(g.weight):150,stackable:g?.stacking!==false,rotate:g?.storagePosition!=='Upright only',stop:1,orderId};};
+const today=()=>new Date().toISOString();
+const fmt=(n:number)=>Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:1});
+
+function LoadScene({v,items,selected,onSelect}:{v:VehicleSpace;items:Placement[];selected:string;onSelect:(s:string)=>void}){
+ const scale=1/120;
+ const colors=['#60a5fa','#f59e0b','#34d399','#a78bfa','#fb7185','#22d3ee'];
+ return <Canvas camera={{position:[v.l*scale*.65,v.h*scale*1.8,v.w*scale*2.7],fov:43}} style={{height:'100%',width:'100%'}} gl={{antialias:true}}>
+  <ambientLight intensity={1.35}/><directionalLight position={[8,15,10]} intensity={1.2}/>
+  <group position={[-v.l*scale/2,-v.h*scale/2,-v.w*scale/2]}>
+   <mesh position={[v.l*scale/2,-0.035,v.w*scale/2]}><boxGeometry args={[v.l*scale,.06,v.w*scale]}/><meshStandardMaterial color="#475569"/></mesh>
+   <mesh position={[v.l*scale/2,v.h*scale/2,v.w*scale/2]}><boxGeometry args={[v.l*scale,v.h*scale,v.w*scale]}/><meshBasicMaterial color="#94a3b8" wireframe transparent opacity={.3}/></mesh>
+   {items.map((p,i)=><group key={p.id} position={[(p.x+p.l/2)*scale,(p.z+p.h/2)*scale,(p.y+p.w/2)*scale]}>
+    <mesh onClick={e=>{e.stopPropagation();onSelect(p.id);}}><boxGeometry args={[p.l*scale,p.h*scale,p.w*scale]}/><meshStandardMaterial color={colors[(p.stop-1)%colors.length]} transparent opacity={selected===p.id?1:.83}/><Edges scale={1.002} color={selected===p.id?'#ffffff':'#0f172a'} threshold={15}/></mesh>
+    {selected===p.id&&<Text fontSize={.13} position={[0,p.h*scale/2+.15,0]} color="#e2e8f0" anchorX="center" anchorY="middle">{p.name.slice(0,26)}</Text>}
+   </group>)}
+  </group><gridHelper args={[Math.max(v.l,v.w)*scale*1.5,20,'#64748b','#334155']} position={[0,-v.h*scale/2-.08,0]}/>
+  <OrbitControls makeDefault enableDamping minDistance={2} maxDistance={80}/>
+ </Canvas>;
+}
+
+export function SmartLoadPlanning(){
+ const db:any=useDB();const mutate=useStore(s=>s.mutate);const ui=useUI();const plans:any[]=db.loadPlans||[];
+ const [planId,setPlanId]=useState('');const [orderId,setOrderId]=useState(String(ui.params?.orderId||''));
+ const [vehicle,setVehicle]=useState<VehicleSpace>(()=>vehicleDefaults(db.trucks?.[0]));
+ const [lines,setLines]=useState<CargoLine[]>(demoLines.map(x=>({...x})));
+ const [result,setResult]=useState<PackingResult|null>(null);const [selected,setSelected]=useState('');const [status,setStatus]=useState('Draft');const [name,setName]=useState('Industrial cargo loading plan');
+ const [warnings,setWarnings]=useState<string[]>([]);
+ const current=plans.find(x=>x.id===planId);
+ const chosen=db.orders?.find((o:any)=>o.id===orderId);
+ const picked=result?.placed.find(x=>x.id===selected);
+ const validation=useMemo(()=>result?validatePlan(result.placed,vehicle):[],[result,vehicle]);
+ const save=()=>{if(!result)return ui.toast('Run optimization first','warn');if(validation.length)return ui.toast('Fix placement exceptions before saving','bad');const id=planId||'LP-'+Date.now().toString(36).toUpperCase();const record={id,planNo:current?.planNo||'SLP-'+String(plans.length+1).padStart(5,'0'),name,orderIds:orderId?[orderId]:[],vehicle,lines,placed:result.placed,unplaced:result.unplaced,stats:{volumePct:result.volumePct,weightPct:result.weightPct,loadedKg:result.loadedKg},status,updatedAt:today(),createdAt:current?.createdAt||today(),engine:'SK heuristic v1'};mutate((db:any)=>{db.loadPlans=db.loadPlans||[];const i=db.loadPlans.findIndex((x:any)=>x.id===id);if(i>=0)db.loadPlans[i]=record;else db.loadPlans.unshift(record);});setPlanId(id);ui.toast('Load plan saved','ok',record.planNo);};
+ const load=(id:string)=>{const p=plans.find(x=>x.id===id);if(!p)return;setPlanId(p.id);setName(p.name);setOrderId(p.orderIds?.[0]||'');setVehicle({...p.vehicle});setLines(p.lines.map((x:any)=>({...x})));setResult({placed:p.placed.map((x:any)=>({...x})),unplaced:p.unplaced||[],volumePct:p.stats.volumePct,weightPct:p.stats.weightPct,loadedKg:p.stats.loadedKg,totalKg:p.lines.reduce((s:number,x:any)=>s+x.kg*x.qty,0),cargoCount:p.placed.length,warnings:[]});setStatus(p.status);setSelected('');};
+ const chooseOrder=(id:string)=>{setOrderId(id);setPlanId('');const o=db.orders?.find((x:any)=>x.id===id);if(o){setLines((o.items||[]).map((x:any,i:number)=>makeLine(x,i,id,db.goods||[])));setName('Loading plan · '+(o.orderNo||id));setWarnings(['Dimensions and weights are sourced from the Goods master where available; missing values use editable estimates. Verify package units, dimensions and weights before optimization.']);}else{setLines(demoLines.map(x=>({...x})));setName('Industrial cargo loading plan');setWarnings([]);}setResult(null);setStatus('Draft');};
+ useEffect(()=>{if(ui.params?.orderId&&ui.params.orderId!==orderId)chooseOrder(ui.params.orderId);},[ui.params?.orderId]);
+ const updateLine=(id:string,patch:Partial<CargoLine>)=>{setLines(a=>a.map(x=>x.id===id?{...x,...patch}:x));setResult(null);setStatus('Draft');};
+ const changeVehicle=(id:string)=>{setVehicle(vehicleDefaults(db.trucks?.find((t:any)=>t.id===id)));setResult(null);setStatus('Draft');};
+ const optimize=()=>{if(!lines.length)return ui.toast('Add cargo first','warn');if(lines.some(l=>![l.qty,l.l,l.w,l.h,l.kg].every(n=>Number.isFinite(n)&&n>0)))return ui.toast('Enter positive cargo dimensions, quantity and weight','bad');if([vehicle.l,vehicle.w,vehicle.h,vehicle.maxKg].some(n=>!Number.isFinite(n)||n<=0))return ui.toast('Enter valid vehicle dimensions','bad');const r=optimizeLoad(lines,vehicle);setResult(r);setSelected('');setStatus('Draft');ui.toast('Optimization completed',r.unplaced.length?'warn':'ok',r.cargoCount+' packages placed');};
+ const move=(axis:'x'|'y'|'z',value:number)=>{if(!result||!picked)return;const p={...picked,[axis]:value};const issues=validatePlacement(p,result.placed.filter(x=>x.id!==p.id),vehicle);if(issues.length){ui.toast('Invalid placement','warn',issues.join('; '));return;}setResult({...result,placed:result.placed.map(x=>x.id===p.id?p:x)});setStatus('Draft');};
+ const setPlanStatus=(next:string)=>{if(!result||!planId)return ui.toast('Save the plan before changing its status','warn');if(validation.length||result.unplaced.length)return ui.toast('Resolve exceptions and unplaced cargo before approval','bad');setStatus(next);mutate((db:any)=>{const p=(db.loadPlans||[]).find((x:any)=>x.id===planId);if(p){p.status=next;p.updatedAt=today();}});ui.toast('Plan '+next.toLowerCase(),'ok');};
+ return <div><PageHeader eyebrow="Operations · Vehicle Planning" title="Smart Load Planning" subtitle="Functional 3D cargo placement with dimensions, payload checks, ERP order linkage and saved loading plans." actions={<><button className="btn-ghost" onClick={()=>{setPlanId('');setOrderId('');setLines(demoLines.map(x=>({...x})));setResult(null);setName('Industrial cargo loading plan');setStatus('Draft');}}>New plan</button><button className="btn-primary" onClick={save}><Save size={15}/> Save plan</button></>}/>
+ <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4"><KPI label="Packages placed" value={result?.cargoCount??'—'} icon={Boxes}/><KPI label="Space utilization" value={result?fmt(result.volumePct)+'%':'—'} icon={Truck}/><KPI label="Payload utilization" value={result?fmt(result.weightPct)+'%':'—'} icon={ClipboardCheck}/><KPI label="Unallocated" value={result?.unplaced.reduce((s,x)=>s+x.qty,0)??'—'} icon={AlertTriangle} tone={result?.unplaced.length?'warn':'violet'}/></div>
+ <div className="grid xl:grid-cols-[minmax(330px,420px)_minmax(0,1fr)] gap-4">
+ <div className="space-y-4">
+ <Card title="Plan & ERP linkage"><div className="grid gap-3">
+ <Field label="Open saved plan"><Select value={planId} onChange={e=>load(e.target.value)} placeholder="New plan" options={plans.map((p:any)=>({value:p.id,label:p.planNo+' · '+p.name}))}/></Field>
+ <Field label="Plan name"><Input value={name} onChange={e=>setName(e.target.value)}/></Field>
+ <Field label="Link ERP order"><Select value={orderId} onChange={e=>chooseOrder(e.target.value)} placeholder="Sample cargo / standalone" options={(db.orders||[]).slice(-250).reverse().map((o:any)=>({value:o.id,label:(o.orderNo||o.id)+' · '+(db.customers?.find((c:any)=>c.id===o.clientId)?.name||'Customer')}))}/></Field>
+ {chosen&&<div className="text-xs text-muted">Linked order: <b>{chosen.orderNo||chosen.id}</b> · {chosen.items?.length||0} cargo lines. Dimensions are editable planning inputs.</div>}
+ </div></Card>
+ <Card title="Vehicle loading space"><div className="grid grid-cols-2 gap-2">
+ <Field label="ERP fleet vehicle" className="col-span-2"><Select value={vehicle.truckId||''} onChange={e=>changeVehicle(e.target.value)} placeholder="Generic truck" options={(db.trucks||[]).map((t:any)=>({value:t.id,label:t.number+' · '+t.capacity}))}/></Field>
+ {(['l','w','h','maxKg'] as const).map(k=><Field key={k} label={{l:'Internal length (cm)',w:'Internal width (cm)',h:'Internal height (cm)',maxKg:'Max payload (kg)'}[k]}><Input type="number" min="1" value={vehicle[k]} onChange={e=>{setVehicle(v=>({...v,[k]:Number(e.target.value)}));setResult(null);setStatus('Draft');}}/></Field>)}
+ <div className="col-span-2 text-[11px] text-muted">Vehicle dimensions are editable planning estimates, not certified fleet specifications.</div>
+ </div></Card>
+ <Card title="Cargo manifest" actions={<button className="btn-ghost btn-sm" onClick={()=>{setLines(a=>[...a,{id:'cargo-'+Date.now(),name:'New cargo',qty:1,l:100,w:80,h:80,kg:100,stackable:true,rotate:true,stop:1}]);setResult(null);}}><Plus size={14}/> Add cargo</button>}>
+ <div className="space-y-3 max-h-[460px] overflow-y-auto">{lines.map(line=><div key={line.id} className="border border-line rounded-lg p-3">
+ <div className="flex gap-2 mb-2"><Input value={line.name} onChange={e=>updateLine(line.id,{name:e.target.value})}/><button className="btn-icon" aria-label="Remove cargo" onClick={()=>{setLines(a=>a.filter(x=>x.id!==line.id));setResult(null);}}><Trash2 size={14}/></button></div>
+ <div className="grid grid-cols-5 gap-1.5">{(['qty','l','w','h','kg'] as const).map(k=><Field key={k} label={{qty:'Qty',l:'L cm',w:'W cm',h:'H cm',kg:'kg/pc'}[k]}><Input className="!px-1.5" type="number" min="1" value={line[k]} onChange={e=>updateLine(line.id,{[k]:Number(e.target.value)})}/></Field>)}</div>
+ <div className="flex gap-3 items-center mt-2 text-[11px]"><label className="flex gap-1 items-center"><input type="checkbox" checked={line.stackable} onChange={e=>updateLine(line.id,{stackable:e.target.checked})}/>Stackable</label><label className="flex gap-1 items-center"><input type="checkbox" checked={line.rotate} onChange={e=>updateLine(line.id,{rotate:e.target.checked})}/>Rotate</label><label className="ml-auto">Stop <input className="input w-12 h-7 ml-1 text-center" type="number" min="1" max="9" value={line.stop} onChange={e=>updateLine(line.id,{stop:Math.max(1,Number(e.target.value))})}/></label></div>
+ </div>)}</div><button className="btn-primary w-full mt-3" onClick={optimize}><Play size={15}/> Optimize loading</button>
+ </Card></div>
+ <div className="space-y-4 min-w-0">
+ <Card title="Interactive 3D loading plan" subtitle="Drag to orbit · scroll to zoom · select a package to adjust its coordinates" actions={<StatusBadge s={status}/>}>
+ <div className="h-[420px] sm:h-[540px] rounded-xl overflow-hidden bg-slate-950">{result?<LoadScene v={vehicle} items={result.placed} selected={selected} onSelect={setSelected}/>:<div className="h-full flex flex-col items-center justify-center text-slate-300 gap-3"><Boxes size={44}/><b>Ready to optimize</b><p className="text-xs text-slate-400 text-center px-6">Choose an ERP order or use sample cargo, confirm dimensions and click Optimize loading.</p></div>}</div>
+ {result&&<div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 text-[12px]"><div><span className="text-muted">Loaded weight</span><b className="block">{fmt(result.loadedKg)} kg</b></div><div><span className="text-muted">Available payload</span><b className="block">{fmt(vehicle.maxKg-result.loadedKg)} kg</b></div><div><span className="text-muted">Volume used</span><b className="block">{fmt(result.volumePct)}%</b></div><div><span className="text-muted">Algorithm</span><b className="block">3D heuristic v1</b></div></div>}
+ </Card>
+ {picked&&result&&<Card title={'Selected cargo · '+picked.name} actions={<button className="btn-ghost btn-sm" onClick={()=>setSelected('')}>Deselect</button>}><div className="grid grid-cols-3 gap-3">{(['x','y','z'] as const).map(k=><Field key={k} label={k.toUpperCase()+' position (cm)'}><Input type="number" value={picked[k]} onChange={e=>move(k,Number(e.target.value))}/></Field>)}</div><p className="text-xs text-muted mt-2">Dimensions {picked.l} × {picked.w} × {picked.h} cm · {picked.kg} kg · stop {picked.stop}. Manual edits reject collisions, unsupported stacks and payload violations.</p></Card>}
+ {(warnings.length>0||result?.warnings.length||validation.length||result?.unplaced.length)?<Card title="Planning exceptions"><div className="space-y-1.5 text-[12px]">{[...warnings,...(result?.warnings||[]),...validation,...(result?.unplaced||[]).map(x=>x.qty+' × '+x.name+' not loaded: '+x.reason)].map((x,i)=><div key={i} className="flex gap-2 items-start"><AlertTriangle size={14} className="text-warn shrink-0"/>{x}</div>)}</div></Card>:null}
+ <Card title="ERP workflow actions"><div className="flex flex-wrap gap-2"><button className="btn-primary" disabled={!planId||!!validation.length||!!result?.unplaced.length} onClick={()=>setPlanStatus('Approved')}><CheckCircle2 size={14}/> Approve load plan</button><button className="btn-ghost" disabled={!planId||status!=='Approved'} onClick={()=>setPlanStatus('Loading Confirmed')}><ClipboardCheck size={14}/> Confirm loading</button><button className="btn-ghost" onClick={()=>ui.nav('ops/vp-loading')}>Open VP Loading</button><button className="btn-ghost" onClick={()=>ui.nav('ops/lr')}>Open LR register</button></div><p className="text-[11px] text-muted mt-3">The plan is linked to the selected order and fleet vehicle in shared ERP state. Existing VP/LR screens are available as downstream links; automatic dispatch gating is a later integration stage.</p></Card>
+ </div></div></div>;
+}

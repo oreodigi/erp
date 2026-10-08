@@ -118,6 +118,7 @@ export function Orders() {
           { label: 'View', icon: Eye, onClick: () => openRecord('order', r.id) },
           { label: 'Edit', icon: Pencil, onClick: () => setForm(r), hidden: r.status !== 'Pending' },
           { label: 'Confirm / reject', icon: CheckCircle2, onClick: () => nav('ops/order-confirmation', { id: r.id }), hidden: r.status !== 'Pending' },
+          { label: 'Smart Load Plan', icon: PackagePlus, onClick: () => nav('ops/smart-load', { orderId: r.id }) },
           { label: 'Create LR', icon: PackagePlus, onClick: () => nav('ops/lr-new', { orderId: r.id }), hidden: !['Confirmed', 'In Process'].includes(r.status) },
           { label: 'Show LRs', icon: FileText, onClick: () => nav('ops/lr', { q: r.orderNo }), hidden: !r.lrTotal },
           { label: 'Pre-close', icon: Ban, onClick: () => ask({ title: `Pre-close ${r.orderNo}?`, body: 'Remaining quantity will be cancelled and the order closed. LRs already created are not affected.', confirmLabel: 'Pre-close', tone: 'bad', onConfirm: () => A.precloseOrder(r.id) }), hidden: !['Confirmed', 'In Process'].includes(r.status) },

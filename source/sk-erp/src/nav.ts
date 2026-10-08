@@ -18,6 +18,7 @@ export const NAV: NavGroup[] = [
       { key: 'ops/order-confirmation', label: 'Order Confirmation', icon: CheckCircle2, legacy: ['Transactions/OrderConfirmation'] },
       { key: 'ops/vp-schedule', label: 'VP Scheduling', icon: CalendarRange, legacy: ['Transactions/VPSchedule'] },
       { key: 'ops/vp-planning', label: 'Vehicle Planning', icon: Layers, legacy: ['Transactions/VPPlanning'] },
+      { key: 'ops/smart-load', label: 'Smart Load Planning', icon: Boxes },
       { key: 'ops/vp-loading', label: 'VP Loading', icon: Boxes, legacy: ['Transactions/VPLoading', 'Prints/VPLoadSummary'] },
       { key: 'ops/lr-new', label: 'Generate LR', icon: PackagePlus, legacy: ['Transactions/GenerateLR', 'GenerateDirectLR', 'GenerateTruckLR'] },
       { key: 'ops/lr', label: 'LR & Consignments', icon: FileText, legacy: ['Reports/LRDetails', 'Prints/LRPrint'] },
@@ -191,7 +192,7 @@ export const SIMPLE_NAV: SimpleGroup[] = [
   { key: 's-board', label: 'Order Board', icon: Columns3, items: [{ key: 'board', label: 'Order Board' }] },
   { key: 's-book', label: 'Bookings', icon: PackagePlus, items: [
     { key: 'book', label: 'New booking', hint: 'Book a truck or rail load in 3 short steps' },
-    { key: 'ops/lr', label: 'All LRs' }, { key: 'ops/orders', label: 'Customer orders' }, { key: 'ops/pod', label: 'POD received' }] },
+    { key: 'ops/lr', label: 'All LRs' }, { key: 'ops/orders', label: 'Customer orders' }, { key: 'ops/smart-load', label: '3D Load Planning' }, { key: 'ops/pod', label: 'POD received' }] },
   { key: 's-rail', label: 'Rail', icon: TrainFront, items: [{ key: 'rail/rakes', label: 'Rakes' }, { key: 'ops/grn', label: 'Goods in at rail head' }, { key: 'ops/dc', label: 'Delivery challans' }] },
   { key: 's-fleet', label: 'Trucks', icon: Truck, items: [{ key: 'fleet/trucks', label: 'Our trucks' }, { key: 'fleet/journeys', label: 'Truck journeys', hint: 'Where each truck went, loaded or empty, and its profit' }, { key: 'fleet/trips', label: 'Trips' }, { key: 'fleet/fuel', label: 'Diesel & expenses' }, { key: 'fleet/drivers', label: 'Drivers' }] },
   { key: 's-money', label: 'Money', icon: IndianRupee, items: [{ key: 'fin/cash-plan', label: 'Cash plan', hint: 'Money in and out for the coming weeks' }, { key: 'fin/billing', label: 'Make bills' }, { key: 'fin/receivables', label: 'Payments to collect' }, { key: 'fin/detention', label: 'Verify detention' }, { key: 'fin/tp-slips', label: 'Pay transporters' }, { key: 'fin/ledger', label: 'Ledger' }, { key: 'fin/tally', label: 'Send to Tally' }] },

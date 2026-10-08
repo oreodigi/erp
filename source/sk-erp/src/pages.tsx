@@ -22,6 +22,7 @@ import { MastersHub, CrudPage, DEFS } from './features/masters';
 import { Users, Roles, ChangePassword, CredentialAdministration, Corrections, Announcements, ExcelImport, LRBarcodes, Settings, PrintGallery, LegacyMap } from './features/admin';
 import { Communication, CommunicationTasks, CommunicationEnquiries, CommunicationAudit } from './features/communication';
 import { MarketingDashboard, Leads, LeadPipeline, FollowUps, Campaigns, Deals, DealPipeline, Quotations, SalesTargets, SalesPerformance, CRMReports, SalesHandoff } from './features/marketing';
+const SmartLoadPlanning = lazy(() => import('./features/smart-load-planning').then(m => ({ default: m.SmartLoadPlanning })));
 import { DetentionWorkbench, DetentionRules } from './features/detention';
 import { Employees, Leaves, ShiftRoster, Attendance, Holidays, Designations, Departments, Appreciation, Payroll, EmployeeSalary, TDS, PayrollExpenses, OvertimeRequests, PayrollReports } from './features/hr';
 
@@ -32,7 +33,7 @@ export const PAGES: Record<string, React.ComponentType> = {
   board: OrderBoard,
   book: QuickBooking,
   help: HelpCenter,
-  'ops/orders': Orders, 'ops/order-confirmation': OrderConfirmation, 'ops/vp-schedule': VPSchedule, 'ops/vp-planning': VPPlanning, 'ops/vp-loading': VPLoading,
+  'ops/orders': Orders, 'ops/order-confirmation': OrderConfirmation, 'ops/vp-schedule': VPSchedule, 'ops/vp-planning': VPPlanning, 'ops/vp-loading': VPLoading, 'ops/smart-load': SmartLoadPlanning,
   'ops/lr-new': GenerateLR, 'ops/lr': LRRegister, 'ops/dc': DeliveryChallans, 'ops/ldc': LDCAck, 'ops/grn': GRNPage, 'ops/dgrn': DGRNPage, 'ops/delivery': Delivery, 'ops/pod': POD, 'ops/courier': Courier,
   'fleet/trucks': Trucks, 'fleet/journeys': Journeys, 'fleet/trips': Trips, 'fleet/logslips': LogSlips, 'fleet/drivers': Drivers, 'fleet/fuel': FuelExpenses, 'fleet/expenses': MonthlyExpenses, 'fleet/trip-completion': TripCompletion, 'fleet/accidents': Accidents,
   'rail/rakes': RakeBoard, 'rail/source': () => <RakeEvents side="src" />, 'rail/destination': () => <RakeEvents side="dst" />, 'rail/status': RakeStatusPage, 'rail/dcwc': DCWCPage,
