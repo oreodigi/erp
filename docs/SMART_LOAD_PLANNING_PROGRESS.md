@@ -42,3 +42,11 @@ Goods-master geometry is used where available; missing values are estimates. Veh
 - Decision: keep browser-native dual heuristic for the client demo. External engines have not been executed head-to-head; no service added.
 - In-app benchmarks now compare baseline and improved placement counts, selected result, LIFO warnings and elapsed time; candidate geometry is independently validated.
 - Stage 3 cross-module ERP synchronization remains outstanding.
+
+## Stage 3 — ERP synchronization
+- Increment 1 DONE: Approved/Loading Confirmed Smart Load Plan status is synchronized to linked Orders.
+- Loading confirmation is propagated to existing matching LRs, including load-plan number/status and planned truck where applicable.
+- Generate LR detects an order's Smart Load Plan and blocks road LR finalisation until that plan is Loading Confirmed.
+- LR 360 shows its Smart Load Plan and gates Dispatch when a linked plan exists but loading is not confirmed.
+- Existing workflows without a Smart Load Plan remain usable; gating applies only when a plan is linked.
+- Next: warehouse/vehicle-planning operational queue and loading confirmation quantities, then dispatch audit synchronization.

@@ -29,6 +29,7 @@ export function GenerateLR() {
   const [disp, setDisp] = useState(false);
   const set = (k: string, v: any) => setF((p: any) => ({ ...p, [k]: v }));
   const orders = db.orders.filter((o: any) => ['Confirmed', 'In Process'].includes(o.status));
+  const orderPlan = f.orderId ? ((db as any).loadPlans||[]).find((p:any)=>(p.orderIds||[]).includes(f.orderId)) : null;
 
   const pickOrder = (id: string) => {
     const o = db.orders.find((x: any) => x.id === id);
@@ -71,6 +72,7 @@ export function GenerateLR() {
     if (fin) {
       if (!Number(f.freight)) e.push('Total freight is required to finalise');
       if (f.mode === 'Road' && !f.truckId) e.push('Assign a truck to finalise a road LR');
+      if (f.mode === 'Road' && orderPlan && orderPlan.status !== 'Loading Confirmed') e.push(`Smart Load Plan ${orderPlan.planNo} must be loading-confirmed before finalising this LR`);
       if (f.mode !== 'Road' && !f.toRailHead) e.push('Select the rail head');
       if (f.vehicle === 'Market' && f.truckId && !Number(m.freight)) e.push('Enter market truck freight');
       f.items.forEach((it: any) => { if (it.pending !== undefined && Number(it.qty) > it.pending && kind === 'order') e.push(`${it.name}: quantity exceeds pending ${it.pending}`); });
@@ -86,6 +88,7 @@ export function GenerateLR() {
       source: lookup.cityName(db, f.sourceCity), destination: lookup.cityName(db, f.destCity), items: f.items.map((i: any) => ({ ...i, qty: Number(i.qty), pending: 0, damage: i.damage || 0 })),
       stdDays: route?.stdDays || Math.max(1, Math.ceil(km / 380)), destinationParty: f.destinationParty || lookup.custName(db, f.consigneeId), deliveryAt: f.deliveryAt || f.consigneeAddr,
       mkt: f.vehicle === 'Market' ? { ...m, freight: Number(m.freight || 0), advance: Number(m.advance || 0), tds: Number(m.tds || 0), hamali: Number(m.hamali || 0), commission: Number(m.commission || 0), net: mNet, totalAdv: Number(m.advance || 0) } : null,
+      loadPlanId: orderPlan?.id || f.loadPlanId || '', loadPlanNo: orderPlan?.planNo || f.loadPlanNo || '', loadPlanStatus: orderPlan?.status || f.loadPlanStatus || '',
       transporterId: f.vehicle === 'Market' ? lookup.truck(db, f.truckId)?.transporterId || f.transporterId : '',
       driverId: f.vehicle === 'Own' ? f.driverId || lookup.truck(db, f.truckId)?.driverId : '',
       status: editing?.status && editing.status !== 'Draft' ? editing.status : undefined,

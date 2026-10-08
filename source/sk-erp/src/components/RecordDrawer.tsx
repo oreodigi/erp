@@ -52,6 +52,8 @@ function LRView({ id, tab: t0, onClose }: any) {
   const { openPrint, nav, openRecord } = useUI.getState();
   if (!l) return null;
   const st = lrStage(db, l);
+  const loadPlan=((db as any).loadPlans||[]).find((p:any)=>p.id===l.loadPlanId||(p.orderIds||[]).includes(l.orderId));
+  const dispatchReady=!loadPlan||loadPlan.status==='Loading Confirmed';
   const { steps, i } = lrStepIndex(db, l);
   const bill = l.billId ? db.bills.find((b: any) => b.id === l.billId) : null;
   const grn = db.grns.find((g: any) => g.lrId === l.id);
@@ -65,7 +67,7 @@ function LRView({ id, tab: t0, onClose }: any) {
         <button className="btn-ghost" onClick={() => setMail(true)}><Mail size={14} /> Email/SMS</button>
         <button className="btn-ghost" onClick={() => openPrint('lr', l.id)}><Printer size={14} /> Print LR</button>
         {!l.billId && <button className="btn-ghost" onClick={() => { onClose(); nav('ops/lr-new', { id: l.id }); }}><Pencil size={14} /> Edit</button>}
-        {l.status === 'Finalised' && <button className="btn-primary" onClick={() => setDisp(true)}><Truck size={14} /> Dispatch</button>}
+        {l.status === 'Finalised' && <button className="btn-primary" disabled={!dispatchReady} title={!dispatchReady?'Confirm Smart Load Plan loading first':''} onClick={() => dispatchReady&&setDisp(true)}><Truck size={14} /> {dispatchReady?'Dispatch':'Awaiting load confirmation'}</button>}
         {l.status === 'Draft' && <button className="btn-primary" onClick={() => { onClose(); nav('ops/lr-new', { id: l.id }); }}>Finalise LR</button>}
         {['In Transit', 'Out for Delivery'].includes(l.status) && l.mode === 'Road' && <button className="btn-primary" onClick={() => setDeliver(true)}><CheckCircle2 size={14} /> Mark delivered</button>}
         {l.status === 'Delivered' && !l.ack && <button className="btn-primary" onClick={() => { onClose(); nav('ops/pod', { lrId: l.id }); }}><Inbox size={14} /> Record POD</button>}
@@ -91,7 +93,7 @@ function LRView({ id, tab: t0, onClose }: any) {
               ['Order', l.orderNo ? <button className="link docno" onClick={() => openRecord('order', l.orderId)}>{l.orderNo}</button> : 'Direct LR'], ['Via HO / rail head', `${l.via}${l.toRailHead ? ' · ' + lookup.branch(db, l.toRailHead)?.name : ''}`],
               ['Place date', `${fmtDate(l.placeDate)} ${l.placeTime}`], ['Out date', `${fmtDate(l.outDate)} ${l.outTime}`],
               ['Payment mode', l.paymentMode], ['Bill head', l.billHead], ['GST paid by', l.gstPayBy], ['Risk', `${l.risk}'s risk`],
-              ['Delivery type', l.deliveryType], ['Seal no.', l.seal], ['Invoices', l.invoices], ['Goods value', inr(l.goodsValue)],
+              ['Delivery type', l.deliveryType], ['Smart Load Plan', loadPlan ? <button className="link docno" onClick={()=>{onClose();nav('ops/smart-load',{planId:loadPlan.id})}}>{loadPlan.planNo} · {loadPlan.status}</button> : 'Not linked'], ['Seal no.', l.seal], ['Invoices', l.invoices], ['Goods value', inr(l.goodsValue)],
             ]} />
           </Card>
           <Card title="Lifecycle"><Timeline items={[...l.events].reverse().slice(0, 6).reverse()} /></Card>
