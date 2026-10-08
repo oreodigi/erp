@@ -147,10 +147,21 @@ export function DispatchModal({ lr, onClose }: { lr: any; onClose: () => void })
   const [km, setKm] = useState<number>(truck?.odometer || 0);
   const [adv, setAdv] = useState(10000);
   const own = db.trucks.filter((t: any) => (lr.vehicle === 'Own' ? t.type === 'Own' : t.type === 'Market'));
+  const loadPlan=((db as any).loadPlans||[]).find((p:any)=>p.id===lr.loadPlanId||(p.orderIds||[]).includes(lr.orderId));
+  const plannedTruck=loadPlan?.vehicle?.truckId||'';
+  const checks=[
+    {label:'LR finalised',ok:lr.status==='Finalised'},
+    {label:'Smart Load Plan confirmed',ok:!loadPlan||loadPlan.status==='Loading Confirmed'},
+    {label:'Physical quantities reconciled',ok:!loadPlan||!!loadPlan.loadingVerification?.confirmedAt&&Number(loadPlan.loadingVerification?.variance||0)===0},
+    {label:'Vehicle matches load plan',ok:!plannedTruck||truckId===plannedTruck},
+    {label:'Driver assigned',ok:lr.vehicle!=='Own'||!!driverId},
+  ];
+  const dispatchReady=!!truckId&&checks.every(x=>x.ok);
   const t = useT();
   return (
-    <Modal open onClose={onClose} title={t('Dispatch {no}', { no: lr.lrNo })} size="sm" footer={<><button className="btn-ghost" onClick={onClose}>{t('Cancel')}</button><button className="btn-primary" disabled={!truckId} onClick={() => { A.dispatchLR(lr.id, { truckId, driverId, openingKm: km, advance: adv }); onClose(); }}><Truck size={14} /> {t('Dispatch & start trip')}</button></>}>
+    <Modal open onClose={onClose} title={t('Dispatch {no}', { no: lr.lrNo })} size="sm" footer={<><button className="btn-ghost" onClick={onClose}>{t('Cancel')}</button><button className="btn-primary" disabled={!dispatchReady} onClick={() => { A.dispatchLR(lr.id, { truckId, driverId, openingKm: km, advance: adv }); onClose(); }}><Truck size={14} /> {t('Dispatch & start trip')}</button></>}>
       <div className="grid gap-3">
+        {loadPlan&&<div className="rounded-lg border border-line p-3"><div className="flex justify-between gap-2 mb-2"><b className="text-[12.5px]">Dispatch readiness</b><StatusBadge s={dispatchReady?'Ready':'Blocked'} tone={dispatchReady?'ok':'bad'}/></div><div className="space-y-1">{checks.map((c:any)=><div key={c.label} className={c.ok?'text-[12px] text-ok':'text-[12px] text-bad'}>{c.ok?'✓':'✕'} {c.label}</div>)}</div>{plannedTruck&&truckId!==plannedTruck&&<div className="text-[11px] text-bad mt-2">Selected truck does not match the vehicle approved in {loadPlan.planNo}.</div>}</div>}
         <Field label={t('Truck')} required><Select value={truckId} onChange={(e) => { setTruck(e.target.value); const tk = lookup.truck(db, e.target.value); setDriver(tk?.driverId || ''); setKm(tk?.odometer || 0); }} placeholder={t('Select truck')} options={own.map((tk: any) => ({ value: tk.id, label: `${tk.number} · ${tk.capacity} · ${t(truckStatus(db, tk))}` }))} /></Field>
         {lr.vehicle === 'Own' && <><Field label={t('Driver')}><Select value={driverId} onChange={(e) => setDriver(e.target.value)} placeholder={t('Select driver')} options={db.drivers.filter((d: any) => !d.blacklisted).map((d: any) => ({ value: d.id, label: d.name }))} /></Field>
           <div className="grid grid-cols-2 gap-3"><Field label={t('Opening KM')}><Input type="number" value={km} onChange={(e) => setKm(Number(e.target.value))} /></Field><Field label={t('Trip advance (₹)')}><Input type="number" value={adv} onChange={(e) => setAdv(Number(e.target.value))} /></Field></div></>}

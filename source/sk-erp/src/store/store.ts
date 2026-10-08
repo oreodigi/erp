@@ -287,6 +287,9 @@ export const A = {
         db.trips.push(t);
         rep(db, 'lrs', id, (l) => { l.tripId = t.id; return l; });
       }
+      const lp=(db as any).loadPlans?.find((p:any)=>p.id===lr.loadPlanId||(p.orderIds||[]).includes(lr.orderId));
+      if(lp){lp.dispatchStatus='Dispatched';lp.dispatchedAt=iso();lp.dispatchedLrId=lr.id;lp.dispatchedTruckId=lr.truckId;lp.status='Dispatched';}
+      if(lr.orderId){const o=db.orders.find((x:any)=>x.id===lr.orderId);if(o){o.loadPlanStatus=lp?'Dispatched':o.loadPlanStatus;o.dispatchStatus='Dispatched';o.dispatchedAt=iso();}}
       lrEvent(db, id, `Dispatched – ${lookup.truckNo(db, lr.truckId)}`);
       act(db, 'LR dispatched', lr.lrNo, 'lr', id);
     });

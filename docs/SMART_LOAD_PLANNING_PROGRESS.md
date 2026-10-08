@@ -53,3 +53,5 @@ Goods-master geometry is used where available; missing values are estimates. Veh
 - Stage 3 increment 3 DONE: Smart Load Plan now has physical loading reconciliation by cargo line (planned, loaded, damage, shortage, variance), supervisor and remarks.
 - Loading confirmation is blocked until every planned package is accounted for and a supervisor is recorded.
 - Confirmed reconciliation persists on the load plan, feeds the Warehouse road load-plan queue actual quantity/variance, and writes a Smart Load Confirmed event to linked LR audit history.
+- Stage 3 increment 4 DONE: Dispatch modal now performs a visible readiness checklist for linked Smart Load Plans: LR finalised, plan loading-confirmed, physical quantities reconciled, selected vehicle matches the approved plan, and driver assigned for own-fleet movement.
+- Dispatch is blocked when any linked-plan readiness check fails. On successful dispatch, LR, linked Order and Smart Load Plan are synchronized; the plan records dispatch time, LR and truck and moves to Dispatched.
