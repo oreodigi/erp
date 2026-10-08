@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { NAV, ROLE_GROUPS, findItem, SIMPLE_NAV, OPEN_ROUTES, ROUTE_ALIAS } from '../nav';
+import { NAV, ROLE_GROUPS, findItem, SIMPLE_NAV, OPEN_ROUTES, ROUTE_ALIAS, ALL_ITEMS } from '../nav';
 import { workCount } from '../features/work';
 import { useUI, useDB, A, lookup, getAuthenticatedRoleCode } from '../store/store';
 import { cls, ago } from '../lib/util';
@@ -157,6 +157,30 @@ function FullNavList({ onPick, collapsed }: { onPick?: () => void; collapsed?: b
   );
 }
 
+function MenuSearch({ collapsed }: { collapsed?: boolean }) {
+  const [q, setQ] = useState('');
+  const nav = useUI((s) => s.nav);
+  const { allowed } = useRole();
+  const t = useT();
+  if (collapsed) return null;
+  const query = q.trim().toLowerCase();
+  const results = query ? ALL_ITEMS.filter((i) => (allowed.has(i.key) || i.key === 'dashboard' || allowed.has(ROUTE_ALIAS[i.key])) && (i.label + ' ' + i.groupLabel + ' ' + i.key).toLowerCase().includes(query)).slice(0, 10) : [];
+  return (
+    <div className="px-2.5 pb-2 relative z-20">
+      <div className="relative">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-sidetext/70 pointer-events-none" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') setQ(''); if (e.key === 'Enter' && results[0]) { nav(results[0].key); setQ(''); } }} placeholder={t('Search menu...')} aria-label={t('Search menu')} className="w-full h-9 rounded-lg border border-white/[.09] bg-white/[.06] pl-9 pr-8 text-[12.5px] text-white placeholder:text-sidetext/60 outline-none focus:border-white/[.22] focus:bg-white/[.09]" />
+        {q && <button onClick={() => setQ('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-sidetext hover:text-white" aria-label="Clear search"><X size={14}/></button>}
+      </div>
+      {query && <div className="absolute left-2.5 right-2.5 top-[42px] rounded-xl border border-white/[.1] bg-side shadow-2xl overflow-hidden max-h-[360px] overflow-y-auto">
+        {results.length ? results.map((i) => <button key={i.key} onClick={() => { nav(i.key); setQ(''); }} className="w-full px-3 py-2.5 flex items-center gap-2 text-left hover:bg-white/[.07] border-b border-white/[.05] last:border-0">
+          <Search size={13} className="text-sidetext shrink-0"/><span className="min-w-0"><span className="block text-[12.5px] font-semibold text-white truncate">{t(i.label)}</span><span className="block text-[10.5px] text-sidetext truncate">{t(i.groupLabel)}</span></span>
+        </button>) : <div className="px-3 py-4 text-[12px] text-sidetext text-center">No menu items found</div>}
+      </div>}
+    </div>
+  );
+}
+
 export function Sidebar() {
   const t = useT();
   const collapsed = useUI((s) => s.collapsed);
@@ -164,6 +188,7 @@ export function Sidebar() {
   return (
     <aside className={cls('hidden lg:flex flex-col bg-side shrink-0 transition-[width] duration-200 relative', collapsed ? 'w-[68px]' : 'w-[252px]')} style={{ backgroundImage: 'radial-gradient(120% 60% at 0% 0%, rgb(var(--violet) / .22), transparent 60%)' }}>
       <div className={cls('h-16 flex items-center px-4 shrink-0', collapsed && 'justify-center px-0')}><Brand collapsed={collapsed} /></div>
+      <MenuSearch collapsed={collapsed} />
       <div className="flex-1 overflow-y-auto side-scroll"><NavList collapsed={collapsed} /></div>
       <MenuModeToggle collapsed={collapsed} />
       <button onClick={() => set({ collapsed: !collapsed })} className="h-11 border-t border-white/[.06] text-sidetext hover:text-white flex items-center gap-2 px-4 text-[12px] font-semibold" aria-label={collapsed ? t('Expand sidebar') : t('Collapse sidebar')}>
