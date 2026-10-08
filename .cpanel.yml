@@ -1,0 +1,7 @@
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/tejum/public_html/
+    - /usr/bin/npm ci --prefix source/sk-erp
+    - /usr/bin/npm run build --prefix source/sk-erp
+    - /bin/cp -a source/sk-erp/dist/. $DEPLOYPATH
+    - /bin/cp -a deploy/public_html/. $DEPLOYPATH
