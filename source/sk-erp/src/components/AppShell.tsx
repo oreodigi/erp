@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { NAV, ROLE_GROUPS, findItem, SIMPLE_NAV, OPEN_ROUTES, ROUTE_ALIAS } from '../nav';
 import { workCount } from '../features/work';
-import { useUI, useDB, A, lookup } from '../store/store';
+import { useUI, useDB, A, lookup, getAuthenticatedRoleCode } from '../store/store';
 import { cls, ago } from '../lib/util';
 import { EMBLEM } from '../assets';
 import { Search, Bell, Sun, Moon, Monitor, ChevronDown, ChevronsLeft, ChevronsRight, Menu, Home, FileText, LayoutGrid, X, LogOut, Plus, Check, Building2, Lightbulb, HelpCircle, ListChecks, Columns3, Sparkles } from 'lucide-react';
@@ -15,11 +15,13 @@ export function useRole() {
   const db = useDB();
   const userId = useUI((s) => s.userId);
   const user = db.users.find((u: any) => u.id === userId) || db.users[0];
-  const role = db.roles.find((r: any) => r.id === user.roleId) || db.roles[0];
+  const authenticatedCode = getAuthenticatedRoleCode();
+  const role = db.roles.find((r: any) => r.code === authenticatedCode) || db.roles.find((r: any) => r.id === user.roleId) || db.roles[0];
   // Super Admin is server-authenticated. Preserve its complete navigation even
   // when an older shared ERP-state snapshot has incomplete role menu metadata.
   const roleMenus = role.code === 'SA' ? NAV.flatMap((g) => g.items.map((i) => i.key)) : (role.menus || []);
-  const allowed = new Set<string>([...roleMenus, ...(user.extraMenus || [])].filter((m) => !(user.deniedMenus || []).includes(m)));
+  const customMenus = ['SA', 'AD'].includes(role.code) ? (user.extraMenus || []) : [];
+  const allowed = new Set<string>([...roleMenus, ...customMenus].filter((m) => !(user.deniedMenus || []).includes(m)));
   return { user, role, allowed, can: (k: string) => allowed.has(k) || k === 'dashboard' || (!!ROUTE_ALIAS[k] && allowed.has(ROUTE_ALIAS[k])) };
 }
 

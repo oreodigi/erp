@@ -58,6 +58,7 @@ let authenticatedPrincipal: { username: string; role: string } | null = null;
 export function setAuthenticatedPrincipal(principal: { username: string; role: string } | null) {
   authenticatedPrincipal = principal;
 }
+export function getAuthenticatedRoleCode() { return localRoleCode(String(authenticatedPrincipal?.role || '')); }
 function localRoleCode(role: string) {
   const key = String(role || '').trim().toLowerCase();
   return ({ superadmin: 'SA', 'super-admin': 'SA', admin: 'AD', administrator: 'AD', manager: 'AD', operator: 'OP', operations: 'OP', dispatcher: 'OP', finance: 'AC', accounts: 'AC', accountant: 'AC', finance_approver: 'AC', customer_care: 'CC', 'customer-care': 'CC', customerrelations: 'CC', fleet: 'CO', fleetmanager: 'CO', workshop: 'SI', workshopmanager: 'SI', inventory: 'SI', warehousemanager: 'SI', store: 'SI', storeincharge: 'SI', storedirector: 'SI', hr: 'HR', onboarding: 'HR', branch_admin: 'BU', branch_user: 'BU', container: 'BU' } as Record<string, string>)[key] || String(role || '').toUpperCase();
@@ -83,7 +84,7 @@ function activate(db: any) {
   const principalRole = localRoleCode(String(principal?.role || ''));
   const matched = principal && db.users.find((u: any) => u.active && String(u.username || '').toLowerCase() === principal.username.toLowerCase());
   const roleMatched = principalRole && db.users.find((u: any) => u.active && roles.get(String(u.roleId)) === principalRole);
-  if (roleMatched || matched) ui.set({ userId: (roleMatched || matched).id });
+  if (matched || roleMatched) ui.set({ userId: (matched || roleMatched).id });
   else if (!db.users.some((u: any) => u.id === ui.userId && u.active)) {
     const admin = db.users.find((u: any) => u.active && ['SA', 'AD'].includes(roles.get(String(u.roleId)) || ''));
     if (admin) ui.set({ userId: admin.id });
