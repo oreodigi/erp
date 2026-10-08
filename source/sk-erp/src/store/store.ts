@@ -493,7 +493,7 @@ export const A = {
   deleteBill(id: string) {
     M((db) => {
       const b = rep(db, 'bills', id, (x) => ({ ...x, deleted: true, deletedAt: iso(), deletedBy: me(), pending: 0 }));
-      b.rows.forEach((r: any) => rep(db, 'lrs', r.lrId, (l) => ({ ...l, billId: '' })));
+      b.rows.forEach((r: any) => { const lr=rep(db, 'lrs', r.lrId, (l) => ({ ...l, billId: '' })); const lp=(db as any).loadPlans?.find((p:any)=>p.id===lr.loadPlanId||(p.orderIds||[]).includes(lr.orderId));if(lp){lp.status='POD Received';lp.billingStatus='Unbilled';lp.billId='';lp.billNo='';lp.billedAt='';lp.paymentStatus='';lp.paidAt='';}if(lr.orderId){const o=db.orders.find((x:any)=>x.id===lr.orderId);if(o){o.loadPlanStatus=lp?'POD Received':o.loadPlanStatus;o.billingStatus='Unbilled';o.billId='';o.billNo='';o.billedAt='';o.paymentStatus='';o.paidAt='';}} });
       db.ledger = db.ledger.filter((e: any) => !(e.refType === 'Bill' && e.refNo === b.billNo));
       act(db, 'Bill deleted', b.billNo, 'bill', id, 'Admin');
     });
@@ -502,7 +502,7 @@ export const A = {
   removeBillLR(billId: string, lrId: string) {
     M((db) => {
       rep(db, 'bills', billId, (b) => { const r = b.rows.find((x: any) => x.lrId === lrId); b.rows = b.rows.filter((x: any) => x.lrId !== lrId); const taxRate = (b.cgst + b.sgst + b.igst) / 100; const less = r.net * (1 + taxRate); b.taxable -= r.net; b.tax = Math.round(b.taxable * taxRate); b.net = b.taxable + b.tax; b.pending = Math.max(0, b.pending - less); b.totalFreight -= r.freight; return b; });
-      rep(db, 'lrs', lrId, (l) => ({ ...l, billId: '' }));
+      const lr=rep(db, 'lrs', lrId, (l) => ({ ...l, billId: '' }));const lp=(db as any).loadPlans?.find((p:any)=>p.id===lr.loadPlanId||(p.orderIds||[]).includes(lr.orderId));if(lp){lp.status='POD Received';lp.billingStatus='Unbilled';lp.billId='';lp.billNo='';lp.billedAt='';}if(lr.orderId){const o=db.orders.find((x:any)=>x.id===lr.orderId);if(o){o.loadPlanStatus=lp?'POD Received':o.loadPlanStatus;o.billingStatus='Unbilled';o.billId='';o.billNo='';o.billedAt='';}}
     });
     toast('LR removed from bill', 'info');
   },
@@ -521,7 +521,7 @@ export const A = {
   },
   deleteReceipt(voucherNo: string) {
     let ok = false;
-    M((db) => { const p = db.clientPayments.find((x: any) => x.voucherNo === voucherNo); if (!p) return; ok = true; db.clientPayments = db.clientPayments.filter((x: any) => x.id !== p.id); rep(db, 'bills', p.billId, (b) => ({ ...b, pending: b.pending + p.received + p.tds + p.damage + p.rateDiff })); db.ledger = db.ledger.filter((e: any) => e.voucherNo !== voucherNo); act(db, 'Receipt deleted', voucherNo, 'bill', p.billId, 'Admin'); });
+    M((db) => { const p = db.clientPayments.find((x: any) => x.voucherNo === voucherNo); if (!p) return; ok = true; db.clientPayments = db.clientPayments.filter((x: any) => x.id !== p.id); const b=rep(db, 'bills', p.billId, (b) => ({ ...b, pending: b.pending + p.received + p.tds + p.damage + p.rateDiff }));for(const r of (b.rows||[])){const lr=db.lrs.find((x:any)=>x.id===r.lrId);if(!lr)continue;const lp=(db as any).loadPlans?.find((q:any)=>q.id===lr.loadPlanId||(q.orderIds||[]).includes(lr.orderId));if(lp){lp.status='Billed';lp.paymentStatus='Pending';lp.paidAt='';lp.lastReceiptNo='';}if(lr.orderId){const o=db.orders.find((x:any)=>x.id===lr.orderId);if(o){o.loadPlanStatus=lp?'Billed':o.loadPlanStatus;o.paymentStatus='Pending';o.paidAt='';}}} db.ledger = db.ledger.filter((e: any) => e.voucherNo !== voucherNo); act(db, 'Receipt deleted', voucherNo, 'bill', p.billId, 'Admin'); });
     ok ? toast(`${voucherNo} deleted`, 'info') : toast('Voucher not found', 'bad', 'Check the receipt voucher number (e.g. RV/412)');
     return ok;
   },
