@@ -26,8 +26,8 @@ Remaining Stage 2:
 - DONE: Goods Master now carries dimensions, orientation, stacking layers and max top-load weight; Fleet truck form now carries loading-space dimensions and max payload.
 - Planner consumes those master values where present, with presets/fallbacks for demo records.
 - DONE: top-load weight and maximum stacking-layer constraints are enforced by the geometric validator.
-- Remaining: stronger multistop/LIFO accessibility validation.
-- Manual package rotation/reposition controls beyond coordinate editing.
+- DONE: multi-stop rear-door accessibility validation, loading/unloading sequences and approval blocking when later-stop cargo obstructs an earlier stop.
+- DONE: selected packages support validated floor rotation / forward rotation in addition to coordinate editing.
 - Printable 3D loading diagram / richer loading instruction.
 - Performance fixtures for larger manifests.
 

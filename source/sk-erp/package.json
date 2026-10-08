@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test:load": "node tests/load-planning.test.mjs && node tests/load-planning-stage2.test.mjs"
+    "test:load": "node tests/load-planning.test.mjs && node tests/load-planning-stage2.test.mjs && node tests/load-planning-sequence.test.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",
