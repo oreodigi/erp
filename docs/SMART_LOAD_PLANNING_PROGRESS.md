@@ -28,8 +28,8 @@ Remaining Stage 2:
 - DONE: top-load weight and maximum stacking-layer constraints are enforced by the geometric validator.
 - DONE: multi-stop rear-door accessibility validation, loading/unloading sequences and approval blocking when later-stop cargo obstructs an earlier stop.
 - DONE: selected packages support validated floor rotation / forward rotation in addition to coordinate editing.
-- Printable 3D loading diagram / richer loading instruction.
-- Performance fixtures for larger manifests.
+- IN PROGRESS: richer visual loading instruction now includes package numbering, stop filters and clickable load/unload sequence; printable manifest remains available. A captured 3D diagram in the printout is still pending.
+- DONE: reproducible 50/120/80-package internal benchmark fixtures with in-app runtime/utilization results. External-engine comparison remains pending.
 
 ## Stage 3 — pending
 Synchronize approved plans with VP/Warehouse/LR/DC and Dispatch readiness, actual loaded quantities, exceptions and overrides.
