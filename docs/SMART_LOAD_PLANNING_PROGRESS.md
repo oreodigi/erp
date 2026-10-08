@@ -50,3 +50,6 @@ Goods-master geometry is used where available; missing values are estimates. Veh
 - LR 360 shows its Smart Load Plan and gates Dispatch when a linked plan exists but loading is not confirmed.
 - Existing workflows without a Smart Load Plan remain usable; gating applies only when a plan is linked.
 - Next: warehouse/vehicle-planning operational queue and loading confirmation quantities, then dispatch audit synchronization.
+- Stage 3 increment 3 DONE: Smart Load Plan now has physical loading reconciliation by cargo line (planned, loaded, damage, shortage, variance), supervisor and remarks.
+- Loading confirmation is blocked until every planned package is accounted for and a supervisor is recorded.
+- Confirmed reconciliation persists on the load plan, feeds the Warehouse road load-plan queue actual quantity/variance, and writes a Smart Load Confirmed event to linked LR audit history.
