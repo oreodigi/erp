@@ -2,7 +2,7 @@ import {
   LayoutDashboard, ClipboardList, CheckCircle2, CalendarRange, Boxes, PackagePlus, FileText, Truck, ClipboardCheck, Warehouse, PackageCheck, MapPinned, Inbox, Mail,
   Bus, Route, ScrollText, IdCard, Fuel, Receipt, Flag, Siren, TrainFront, Train, Activity, Container, FileBadge, IndianRupee, Wallet, HandCoins, BadgeCheck,
   FileSpreadsheet, BookOpen, Database, Wrench, ListChecks, Cog, Package, Store, ShoppingCart, Stamp, ArrowDownToLine, Repeat, Receipt as ReceiptIcon, Users,
-  Building2, FileSignature, Table2, Files, LifeBuoy, Megaphone, BarChart3, Printer, Layers, Shield, KeyRound, Settings, Upload, Barcode, Eraser, Gauge, AlertTriangle, ShieldCheck, Scale, Hammer, Banknote, CircleDollarSign, Sparkles, Columns3, Home, Timer, MessageCircle, HelpCircle
+  Building2, FileSignature, Table2, Files, LifeBuoy, Megaphone, BarChart3, Printer, Layers, Shield, KeyRound, Settings, Upload, Barcode, Eraser, Gauge, AlertTriangle, ShieldCheck, Scale, Hammer, Banknote, CircleDollarSign, Sparkles, Columns3, Home, Timer, MessageCircle, HelpCircle, Target
 } from 'lucide-react';
 
 export type NavItem = { key: string; label: string; icon: any; legacy?: string[]; badge?: string };
@@ -108,6 +108,19 @@ export const NAV: NavGroup[] = [
       { key: 'cust/support', label: 'Complaints & Support', icon: LifeBuoy, legacy: ['Support/CustomerComplaint'] },
     ],
   },
+  { key: 'marketing', label: 'Marketing & CRM', icon: Megaphone, items: [
+    { key: 'marketing/dashboard', label: 'Marketing Dashboard', icon: BarChart3 },
+    { key: 'marketing/leads', label: 'All Leads', icon: Users },
+    { key: 'marketing/lead-pipeline', label: 'Lead Pipeline', icon: Columns3 },
+    { key: 'marketing/followups', label: 'Follow-ups & Activities', icon: CalendarRange },
+    { key: 'marketing/campaigns', label: 'Campaigns', icon: Megaphone },
+    { key: 'marketing/deals', label: 'Deals', icon: HandCoins },
+    { key: 'marketing/deal-pipeline', label: 'Deal Pipeline', icon: Columns3 },
+    { key: 'marketing/quotations', label: 'Quotations', icon: FileText },
+    { key: 'marketing/targets', label: 'Sales Targets', icon: Target },
+    { key: 'marketing/performance', label: 'Sales Performance', icon: Activity },
+    { key: 'marketing/reports', label: 'CRM Reports', icon: BarChart3 },
+  ] },
   { key: 'hr', label: 'HR', icon: Users, items: [
     { key: 'hr/employees', label: 'Employees', icon: Users },
     { key: 'hr/leaves', label: 'Leaves', icon: CalendarRange },
@@ -156,11 +169,11 @@ export const findItem = (key: string) => ALL_ITEMS.find((i) => i.key === key || 
 // Role → module groups (from legacy role dashboards + MenuPerRole)
 export const ROLE_GROUPS: Record<string, string[]> = {
   SA: NAV.map((g) => g.key),
-  AD: ['home', 'comms', 'comms-admin', 'ops', 'fleet', 'rail', 'wh', 'cust', 'hr', 'payroll', 'reports', 'masters', 'access', 'admin'],
+  AD: ['home', 'comms', 'comms-admin', 'ops', 'fleet', 'rail', 'wh', 'cust', 'marketing', 'hr', 'payroll', 'reports', 'masters', 'access', 'admin'],
   OP: ['home', 'comms', 'ops', 'fleet', 'rail', 'wh', 'cust', 'reports'],
   BU: ['home', 'comms', 'ops', 'rail', 'wh', 'reports'],
   AC: ['home', 'comms', 'fin', 'cust', 'payroll', 'reports'],
-  CC: ['home', 'comms', 'ops', 'cust', 'reports'],
+  CC: ['home', 'comms', 'ops', 'cust', 'marketing', 'reports'],
   CO: ['home', 'comms', 'fleet', 'ws', 'reports'],
   SI: ['home', 'comms', 'ws', 'reports'],
   HR: ['home', 'comms', 'hr', 'payroll', 'masters', 'access'],
