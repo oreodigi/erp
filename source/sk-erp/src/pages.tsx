@@ -6,6 +6,7 @@ import { OrderBoard } from './features/board';
 import { QuickBooking } from './features/book';
 import { Academy } from './features/academy';
 import { TrainingDashboard, TrainingCoverage } from './features/training-admin';
+import { FeedbackReview } from './features/feedback-review';
 import { UserManagement } from './features/user-admin';
 import { Journeys } from './features/journeys';
 import { CashPlan } from './features/cashplan';
@@ -52,5 +53,5 @@ export const PAGES: Record<string, React.ComponentType> = {
   'access/users': UserManagement, 'access/roles': Roles, 'access/password': ChangePassword,
   'access/credentials': UserManagement,
   communication: Communication, 'communication/tasks': CommunicationTasks, 'communication/enquiries': CommunicationEnquiries, 'communication/audit': CommunicationAudit,
-  'admin/corrections': Corrections, 'admin/announcements': Announcements, 'admin/import': ExcelImport, 'admin/barcode': LRBarcodes, 'admin/settings': Settings, 'admin/time-limits': TimeLimits, 'admin/training': TrainingDashboard, 'admin/training-coverage': TrainingCoverage, 'admin/legacy-map': LegacyMap,
+  'admin/corrections': Corrections, 'admin/announcements': Announcements, 'admin/import': ExcelImport, 'admin/barcode': LRBarcodes, 'admin/settings': Settings, 'admin/time-limits': TimeLimits, 'admin/training': TrainingDashboard, 'admin/training-coverage': TrainingCoverage, 'admin/feedback': FeedbackReview, 'admin/legacy-map': LegacyMap,
 };

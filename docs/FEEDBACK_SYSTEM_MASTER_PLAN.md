@@ -23,8 +23,8 @@ Authenticated user/role, route/screen, module, current route params/record conte
 6. Voice recorder, attachment picker/previews and submission.
 7. My Feedback list/status.
 
-## Stage 2 — Admin Feedback Centre
-Administration → Feedback & Review: KPIs, filters, Feedback 360, assignment, status, internal notes, resolution, duplicate/reopen flow and attachment/audio review.
+## Stage 2 — Admin Feedback Centre — COMPLETE
+Administration → Feedback & Review now provides KPI cards, search/status/module/impact filters, Feedback 360 context, active-user assignment, status/impact triage, protected attachment/audio review, internal notes, user-visible discussion, resolution notes and API-backed duplicate/reopen lifecycle support.
 
 Lifecycle: New → Reviewing → Accepted → Planned → In Development → Ready for Testing → Fixed → Verified → Closed. Alternate: Duplicate / Not Planned / Need More Information.
 

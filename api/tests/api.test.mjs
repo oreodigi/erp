@@ -375,6 +375,20 @@ async function run(){
   expectStatus(await api('POST',`/api/feedback/${fid}/attachments`,{token:erin,body:{name:'bad.exe',mime_type:'application/x-msdownload',data:'YQ=='}}),400);
  });
 
+ await step('feedback discussion separates internal admin notes',async()=>{
+  const c=await api('POST','/api/feedback',{token:erin,body:{feedback_type:'Confusing',impact:'Low',description:'Discussion test',screen_id:'dashboard',route:'dashboard',mode:'Company'}});const fid=c.json.item.id;
+  expectStatus(await api('POST',`/api/feedback/${fid}/comments`,{token:erin,body:{body:'User clarification',internal:true}}),201);
+  expectStatus(await api('POST',`/api/feedback/${fid}/comments`,{token:alice,body:{body:'Private triage note',internal:true}}),201);
+  const own=await api('GET',`/api/feedback/${fid}`,{token:erin});expectStatus(own,200);assert.equal(own.json.item.comments.length,1);assert.equal(own.json.item.comments[0].body,'User clarification');assert.equal(own.json.item.comments[0].internal,false);
+  const adm=await api('GET',`/api/feedback/${fid}`,{token:alice});expectStatus(adm,200);assert.equal(adm.json.item.comments.length,2);assert.ok(adm.json.item.comments.some(x=>x.internal&&x.body==='Private triage note'));
+ });
+ await step('feedback duplicate requires original reference',async()=>{
+  const a=await api('POST','/api/feedback',{token:erin,body:{feedback_type:'Bug',impact:'Medium',description:'Original',screen_id:'dashboard',route:'dashboard',mode:'Company'}});
+  const b=await api('POST','/api/feedback',{token:erin,body:{feedback_type:'Bug',impact:'Medium',description:'Duplicate',screen_id:'dashboard',route:'dashboard',mode:'Company'}});
+  expectStatus(await api('PATCH',`/api/feedback/${b.json.item.id}`,{token:alice,body:{status:'Duplicate'}}),400);
+  const ok=await api('PATCH',`/api/feedback/${b.json.item.id}`,{token:alice,body:{status:'Duplicate',duplicate_of:a.json.item.id}});expectStatus(ok,200);assert.equal(String(ok.json.item.duplicate_of),String(a.json.item.id));
+ });
+
  // ---------- audit ----------
  await step('audit events are written for user changes without password data',async()=>{
   const r=await admin.query("SELECT action,before_state::text b,after_state::text a FROM app.audit_events WHERE entity_type='auth_user' ORDER BY id");

@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-09 — Feedback Review Centre Stage 2
+
+- Added Administration → Feedback & Review with KPI cards and searchable status/module/impact filters.
+- Added Feedback 360 review context, active-user assignment, impact/status triage and resolution notes.
+- Added admin-only internal notes and user-visible feedback discussion with API visibility enforcement.
+- Added attachment/audio review inside the central review workflow.
+- Added duplicate lifecycle validation and retained reopen support through status transitions.
+- Added Help & Training metadata for the new review screen; training coverage remains complete.
+- API integration suite expanded to 37 passing tests.
+
 ## 2026-10-09 — ERP Feedback & Review System
 
 - Added a global Give Feedback action across the authenticated ERP shell.

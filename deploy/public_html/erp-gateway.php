@@ -17,6 +17,7 @@ $strictRoutes=[
  '#^/api/feedback$#D'=>['GET','POST'],
  '#^/api/feedback/[1-9][0-9]{0,15}$#D'=>['GET','PATCH'],
  '#^/api/feedback/[1-9][0-9]{0,15}/attachments$#D'=>['POST'],
+ '#^/api/feedback/[1-9][0-9]{0,15}/comments$#D'=>['POST'],
  '#^/api/feedback/attachments/[1-9][0-9]{0,15}$#D'=>['GET'],
  '#^/api/admin/users$#D'=>['GET','POST'],
  '#^/api/admin/users/[1-9][0-9]{0,15}$#D'=>['PATCH','DELETE'],

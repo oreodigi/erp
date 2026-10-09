@@ -3,7 +3,7 @@ import {
   Bus, Route, ScrollText, IdCard, Fuel, Receipt, Flag, Siren, TrainFront, Train, Activity, Container, FileBadge, IndianRupee, Wallet, HandCoins, BadgeCheck,
   FileSpreadsheet, BookOpen, Database, Wrench, ListChecks, Cog, Package, Store, ShoppingCart, Stamp, ArrowDownToLine, Repeat, Receipt as ReceiptIcon, Users,
   Building2, FileSignature, Table2, Files, LifeBuoy, Megaphone, BarChart3, Printer, Layers, Shield, KeyRound, Settings, Upload, Barcode, Eraser, Gauge, AlertTriangle, ShieldCheck, Scale, Hammer, Banknote, CircleDollarSign, Sparkles, Columns3, Home, Timer, Settings2, MessageCircle, HelpCircle, Target
-, GraduationCap
+, GraduationCap, MessageSquare
 } from 'lucide-react';
 
 export type NavItem = { key: string; label: string; icon: any; legacy?: string[]; badge?: string };
@@ -162,6 +162,7 @@ export const NAV: NavGroup[] = [
       { key: 'admin/import', label: 'Excel Import', icon: Upload, legacy: ['MasterPages/ExcelUploadData', 'CustomerUpload', 'ImportExcel/'] },
       { key: 'admin/barcode', label: 'LR Barcodes', icon: Barcode, legacy: ['GenerateBarcode/GenerateLRBarcode'] },
       { key: 'admin/training', label: 'Training Dashboard', icon: GraduationCap },
+      { key: 'admin/feedback', label: 'Feedback & Review', icon: MessageSquare },
       { key: 'admin/training-coverage', label: 'Training Coverage', icon: ListChecks },
       { key: 'admin/time-limits', label: 'Stage Time Limits', icon: Timer },
       { key: 'admin/settings', label: 'System Settings', icon: Gauge, legacy: ['Web.config', 'Schedule/GRNMail'] },
@@ -207,4 +208,4 @@ export const SIMPLE_NAV: SimpleGroup[] = [
 export const OPEN_ROUTES = ['dashboard', 'work', 'board', 'help', 'access/password'];
 
 // New screens inherit access from an existing screen of the same module (role menus are stored with the data).
-export const ROUTE_ALIAS: Record<string, string> = { 'fleet/journeys': 'fleet/trips', 'fin/cash-plan': 'fin/receivables', 'admin/time-limits': 'admin/settings', 'admin/training': 'admin/settings', 'admin/training-coverage': 'admin/settings' };
+export const ROUTE_ALIAS: Record<string, string> = { 'fleet/journeys': 'fleet/trips', 'fin/cash-plan': 'fin/receivables', 'admin/time-limits': 'admin/settings', 'admin/training': 'admin/settings', 'admin/training-coverage': 'admin/settings', 'admin/feedback': 'admin/settings' };

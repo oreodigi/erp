@@ -11,9 +11,10 @@ const clean=(x,n=500)=>String(x??'').trim().slice(0,n);
 const ROOT=process.env.SK_FEEDBACK_DIR||'/home/tejum/sk-erp-data/feedback';
 const MIME=new Map([['image/png','png'],['image/jpeg','jpg'],['image/webp','webp'],['image/gif','gif'],['application/pdf','pdf'],['application/msword','doc'],['application/vnd.openxmlformats-officedocument.wordprocessingml.document','docx'],['application/vnd.ms-excel','xls'],['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','xlsx'],['text/plain','txt'],['text/csv','csv'],['audio/webm','webm'],['audio/ogg','ogg'],['audio/mp4','m4a'],['audio/mpeg','mp3'],['audio/wav','wav']]);
 const kind=m=>m.startsWith('image/')?'image':m.startsWith('audio/')?'audio':'document';
-const select=`SELECT f.*,u.username,u.full_name,u.role,au.full_name assigned_name,
+const select=(admin)=>`SELECT f.*,u.username,u.full_name,u.role,au.full_name assigned_name,
  COALESCE((SELECT jsonb_agg(jsonb_build_object('id',p.id,'body',p.body,'position',p.position) ORDER BY p.position) FROM app.feedback_points p WHERE p.feedback_id=f.id),'[]'::jsonb) points,
- COALESCE((SELECT jsonb_agg(jsonb_build_object('id',a.id,'kind',a.kind,'name',a.original_name,'mime_type',a.mime_type,'size_bytes',a.size_bytes) ORDER BY a.id) FROM app.feedback_attachments a WHERE a.feedback_id=f.id),'[]'::jsonb) attachments
+ COALESCE((SELECT jsonb_agg(jsonb_build_object('id',a.id,'kind',a.kind,'name',a.original_name,'mime_type',a.mime_type,'size_bytes',a.size_bytes) ORDER BY a.id) FROM app.feedback_attachments a WHERE a.feedback_id=f.id),'[]'::jsonb) attachments,
+ COALESCE((SELECT jsonb_agg(jsonb_build_object('id',c.id,'body',c.body,'internal',c.internal,'created_at',c.created_at,'user_id',c.user_id,'full_name',cu.full_name,'username',cu.username) ORDER BY c.created_at) FROM app.feedback_comments c JOIN app.users cu ON cu.id=c.user_id WHERE c.feedback_id=f.id AND (${admin?'TRUE':'NOT c.internal'})),'[]'::jsonb) comments
  FROM app.feedback f JOIN app.users u ON u.id=f.user_id LEFT JOIN app.users au ON au.id=f.assigned_to`;
 
 export async function handleFeedback({path,method,url,user,readBody,pool,writePool,json,res}){
@@ -22,7 +23,7 @@ export async function handleFeedback({path,method,url,user,readBody,pool,writePo
  try{
   if(path==='/api/feedback'&&method==='GET'){
    const where=admin?'TRUE':'f.user_id=$1',args=admin?[]:[user.id];
-   const r=await pool.query(select+` WHERE ${where} ORDER BY f.created_at DESC LIMIT 300`,args);
+   const r=await pool.query(select(admin)+` WHERE ${where} ORDER BY f.created_at DESC LIMIT 300`,args);
    json(res,200,{items:r.rows,admin});return true;
   }
   if(path==='/api/feedback'&&method==='POST'){
@@ -60,9 +61,20 @@ export async function handleFeedback({path,method,url,user,readBody,pool,writePo
    if(!r.rowCount||(!admin&&String(r.rows[0].owner_id)!==String(user.id)))throw fail(404,'Attachment not found');
    const raw=await fs.readFile(pathMod.join(ROOT,r.rows[0].stored_name));json(res,200,{name:r.rows[0].original_name,mime_type:r.rows[0].mime_type,data:raw.toString('base64')});return true;
   }
+  const comments=path.match(/^\/api\/feedback\/(\d+)\/comments$/);
+  if(comments&&method==='POST'){
+   if(!writePool)throw fail(503,'Feedback comments unavailable');
+   const own=await pool.query('SELECT user_id FROM app.feedback WHERE id=$1',[comments[1]]);
+   if(!own.rowCount||(!admin&&String(own.rows[0].user_id)!==String(user.id)))throw fail(404,'Feedback not found');
+   const d=await readBody(),body=clean(d?.body,5000),internal=admin&&d?.internal===true;
+   if(!body)throw fail(400,'Comment is required');
+   const r=await writePool.query('INSERT INTO app.feedback_comments(feedback_id,user_id,body,internal) VALUES($1,$2,$3,$4) RETURNING *',[comments[1],user.id,body,internal]);
+   await writePool.query('INSERT INTO app.feedback_history(feedback_id,actor_id,action,after_state) VALUES($1,$2,$3,$4)',[comments[1],user.id,internal?'internal_note':'comment_added',{comment_id:r.rows[0].id}]);
+   json(res,201,{comment:r.rows[0]});return true;
+  }
   const m=path.match(/^\/api\/feedback\/(\d+)$/);
   if(m&&method==='GET'){
-   const r=await pool.query(select+' WHERE f.id=$1'+(admin?'':' AND f.user_id=$2'),admin?[m[1]]:[m[1],user.id]);
+   const r=await pool.query(select(admin)+' WHERE f.id=$1'+(admin?'':' AND f.user_id=$2'),admin?[m[1]]:[m[1],user.id]);
    if(!r.rowCount)throw fail(404,'Feedback not found');json(res,200,{item:r.rows[0]});return true;
   }
   if(m&&method==='PATCH'){
@@ -73,7 +85,10 @@ export async function handleFeedback({path,method,url,user,readBody,pool,writePo
    const impact=d.impact===undefined?prior.rows[0].impact:d.impact;if(!IMPACT.has(impact))throw fail(400,'Invalid impact');
    const assigned=d.assigned_to===undefined?prior.rows[0].assigned_to:(d.assigned_to||null);
    const resolution=d.resolution===undefined?prior.rows[0].resolution:clean(d.resolution,10000);
-   const r=await writePool.query(`UPDATE app.feedback SET status=$1,impact=$2,assigned_to=$3,resolution=$4,updated_at=now(),resolved_at=CASE WHEN $1=ANY($5::text[]) THEN COALESCE(resolved_at,now()) ELSE NULL END WHERE id=$6 RETURNING *`,[status,impact,assigned,resolution,['Fixed','Verified','Closed','Duplicate','Not Planned'],m[1]]);
+   const duplicate=d.duplicate_of===undefined?prior.rows[0].duplicate_of:(d.duplicate_of||null);
+   if(status==='Duplicate'&&!duplicate)throw fail(400,'Select the original feedback for a duplicate');
+   if(duplicate&&String(duplicate)===String(m[1]))throw fail(400,'Feedback cannot duplicate itself');
+   const r=await writePool.query(`UPDATE app.feedback SET status=$1,impact=$2,assigned_to=$3,resolution=$4,duplicate_of=$5,updated_at=now(),resolved_at=CASE WHEN $1=ANY($6::text[]) THEN COALESCE(resolved_at,now()) ELSE NULL END WHERE id=$7 RETURNING *`,[status,impact,assigned,resolution,duplicate,['Fixed','Verified','Closed','Duplicate','Not Planned'],m[1]]);
    await writePool.query('INSERT INTO app.feedback_history(feedback_id,actor_id,action,before_state,after_state) VALUES($1,$2,$3,$4,$5)',[m[1],user.id,'updated',prior.rows[0],r.rows[0]]);
    json(res,200,{item:r.rows[0]});return true;
   }
