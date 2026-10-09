@@ -14,6 +14,10 @@ $strictRoutes=[
  '#^/api/training/(?:records|reset|quiz-attempts)$#D'=>['POST'],
  '#^/api/training/settings$#D'=>['GET','PUT'],
  '#^/api/training/users/[1-9][0-9]{0,15}$#D'=>['GET'],
+ '#^/api/feedback$#D'=>['GET','POST'],
+ '#^/api/feedback/[1-9][0-9]{0,15}$#D'=>['GET','PATCH'],
+ '#^/api/feedback/[1-9][0-9]{0,15}/attachments$#D'=>['POST'],
+ '#^/api/feedback/attachments/[1-9][0-9]{0,15}$#D'=>['GET'],
  '#^/api/admin/users$#D'=>['GET','POST'],
  '#^/api/admin/users/[1-9][0-9]{0,15}$#D'=>['PATCH','DELETE'],
  '#^/api/admin/users/[1-9][0-9]{0,15}/reset-password$#D'=>['POST'],
@@ -21,7 +25,8 @@ $strictRoutes=[
 $strictMethods=null;
 foreach($strictRoutes as $pattern=>$methods){if(preg_match($pattern,(string)$path)===1){$strictMethods=$methods;break;}}
 $pathMatchesTraining=$strictMethods!==null&&strncmp((string)$path,'/api/training',13)===0;
-$pathMatchesApi=preg_match('#^/api/work-items(?:/[1-9][0-9]*)?$#D',(string)$path)===1||$pathMatchesTraining;
+$pathMatchesFeedback=$strictMethods!==null&&strncmp((string)$path,'/api/feedback',13)===0;
+$pathMatchesApi=preg_match('#^/api/work-items(?:/[1-9][0-9]*)?$#D',(string)$path)===1||$pathMatchesTraining||$pathMatchesFeedback;
 $pathMatchesAdminUsers=$strictMethods!==null&&strncmp((string)$path,'/api/admin/users',16)===0;
 $pathMatchesCommunication=preg_match('#^/api/communication(?:/(?:overview|audit|conversations|tasks)|/conversations/[1-9][0-9]*(?:/(?:messages|read))?|/tasks/[1-9][0-9]*)$#',(string)$path)===1;
 $pathMatchesState=$path==='/api/erp/state';
@@ -44,8 +49,9 @@ if($path!=='/auth/login'){
 }
 $body='';
 if($path==='/auth/login'||$path==='/auth/change-password'||$pathMatchesApi||$pathMatchesState||$pathMatchesAdminUsers||$pathMatchesDashboardLayout||$pathMatchesCommunication){
- $body=file_get_contents('php://input',false,null,0,$pathMatchesState?12000000:4097);
- if(strlen($body)>($pathMatchesState?12000000:4096)){http_response_code(413);echo json_encode(['error'=>'Request too large']);exit;}
+ $bodyLimit=$pathMatchesFeedback?18000000:($pathMatchesState?12000000:4096);
+ $body=file_get_contents('php://input',false,null,0,$bodyLimit+1);
+ if(strlen($body)>$bodyLimit){http_response_code(413);echo json_encode(['error'=>'Request too large']);exit;}
 }
 $ch=curl_init('http://127.0.0.1:3107'.$path);
 curl_setopt_array($ch,[CURLOPT_CUSTOMREQUEST=>$routes[$path],CURLOPT_HTTPHEADER=>$headers,CURLOPT_POSTFIELDS=>in_array($routes[$path],['POST','PUT','PATCH'],true)?$body:null,CURLOPT_RETURNTRANSFER=>true,CURLOPT_CONNECTTIMEOUT=>2,CURLOPT_TIMEOUT=>10,CURLOPT_FOLLOWLOCATION=>false]);
