@@ -4,7 +4,7 @@ DirectoryIndex index.html
 RewriteEngine On
 RewriteCond %{HTTPS} !=on
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
-RewriteRule ^(?:auth/(?:login|logout|me|change-password)|api/(?:dashboard|analytics|erp/state|dashboard-layout|admin/users(?:/[0-9]+(?:/reset-password)?)?|communication(?:/(?:overview|audit|conversations|tasks)|/conversations/[0-9]+(?:/(?:messages|read))?|/tasks/[0-9]+)|work-items(?:/[0-9]+)?|training(?:/(?:progress|courses|lessons|me|team|records|reset|quiz-attempts|settings|users/[0-9]+))?))$ erp-gateway.php [L,QSA,E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteRule ^(?:auth/(?:login|logout|me|change-password)|api/(?:dashboard|analytics|erp/state|dashboard-layout|admin/users(?:/[0-9]+(?:/reset-password)?)?|communication(?:/(?:overview|audit|conversations|tasks)|/conversations/[0-9]+(?:/(?:messages|read))?|/tasks/[0-9]+)|work-items(?:/[0-9]+)?|feedback(?:/[0-9]+(?:/attachments)?|/attachments/[0-9]+)?|training(?:/(?:progress|courses|lessons|me|team|records|reset|quiz-attempts|settings|users/[0-9]+))?))$ erp-gateway.php [L,QSA,E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 RewriteRule ^(?:internal|\.env|private|server|sk-translines-.*\.zip$|.*\.(?:zip|sql|bak|sqlite|env)$) - [F,L,NC]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

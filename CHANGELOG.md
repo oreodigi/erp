@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-09 — ERP Feedback & Review System
+
+- Added a global Give Feedback action across the authenticated ERP shell.
+- Added contextual feedback capture with screen/route, record parameters, Company/Practice mode and device context.
+- Added Bug/Improvement/Missing Feature/Confusing/Data/Training/Other classifications and impact levels.
+- Added text and multi-point feedback, browser voice recording, image/document selection and secure persisted attachments.
+- Added My Feedback with status tracking and an Admin/Manager Review Inbox with lifecycle updates.
+- Added PostgreSQL feedback, points, attachment metadata, comments and audit-history schema.
+- Feedback files are stored outside the public web root with authenticated retrieval, ownership checks, MIME allow-list and 12 MB per-file cap.
+- Added API integration tests for ownership, admin review, attachment retrieval and unsafe attachment rejection.
+
 ## 2026-10-09 — Role-Based Training Academy & User Management
 
 - Added server-backed user lifecycle administration and per-user RBAC overrides.

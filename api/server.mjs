@@ -5,6 +5,7 @@ import {verifyPassword,hashPassword,createSession,readSession,revokeSession} fro
 import {handleAdminUsers,loadProfile,accountPassword,PROFILE_COLUMNS} from './users.mjs';
 import {handleWorkItems} from './work-items.mjs';
 import {handleTraining} from './training.mjs';
+import {handleFeedback} from './feedback.mjs';
 import {handleCommunication} from './communication.mjs';
 const env=process.env;
 const poolConfig={host:env.SK_DB_HOST||'127.0.0.1',port:Number(env.SK_DB_PORT||5432),database:env.SK_DB_NAME||'sk_translines',max:3,connectionTimeoutMillis:3000,idleTimeoutMillis:15000};
@@ -128,6 +129,7 @@ const server=http.createServer(async(req,res)=>{
  if(await handleAdminUsers({req,res,path,method:req.method,url,user,readBody:()=>body(req),pool,writePool,json}))return;
  if(await handleWorkItems({path,method:req.method,url,user,readBody:()=>body(req),pool,writePool,json,res}))return;
  if(await handleTraining({path,method:req.method,user,readBody:()=>body(req),pool,writePool,json,res}))return;
+ if(await handleFeedback({path,method:req.method,url,user,readBody:()=>body(req,18000000),pool,writePool,json,res}))return;
  if(await handleCommunication({path,method:req.method,url,user,readBody:()=>body(req,20000),pool,writePool,json,res}))return;
  return json(res,404,{error:'Not found'});
 });

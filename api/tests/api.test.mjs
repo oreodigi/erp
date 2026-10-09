@@ -57,13 +57,13 @@ async function bootstrap(){
  await admin.query(`CREATE SCHEMA app;
   CREATE TABLE app.users(id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,username text NOT NULL UNIQUE,password_hash text NOT NULL,role text NOT NULL,active boolean NOT NULL DEFAULT true,created_at timestamptz NOT NULL DEFAULT now());
   GRANT USAGE ON SCHEMA app TO sk_erp_reader;GRANT SELECT ON app.users TO sk_erp_reader;`);
- for(const f of ['03_operational_foundation.sql','04_api_writer.sql','05_writer_access.sql','06_erp_state.sql','07_dashboard_layouts.sql','08_communication.sql','09_communication_audit_grant.sql','10_users_training_academy.sql'])await applyFile(admin,f);
+ for(const f of ['03_operational_foundation.sql','04_api_writer.sql','05_writer_access.sql','06_erp_state.sql','07_dashboard_layouts.sql','08_communication.sql','09_communication_audit_grant.sql','10_users_training_academy.sql','11_feedback_system.sql'])await applyFile(admin,f);
  await applyFile(admin,'10_users_training_academy.sql'); // idempotent re-run
  await admin.query("INSERT INTO app.users(username,password_hash,role,active,full_name) VALUES($1,$2,'superadmin',true,'Root Admin')",[ROOT_USER,hashPassword(ROOT_PASS)]);
 }
 async function startApi(){
  apiPort=await freePort();
- apiProc=spawn(process.execPath,[path.join(apiDir,'server.mjs')],{cwd:apiDir,env:{PATH:process.env.PATH,SK_API_PORT:String(apiPort),SK_API_HOST:'127.0.0.1',SK_DB_HOST:sockDir,SK_DB_PORT:String(pgPort),SK_DB_NAME:'sk_translines',SK_DB_USER:'sk_test_reader',SK_DB_PASSWORD:'test-only-reader',SK_DB_WRITE_USER:'sk_test_writer',SK_DB_WRITE_PASSWORD:'test-only-writer'},stdio:['ignore','pipe','pipe']});
+ apiProc=spawn(process.execPath,[path.join(apiDir,'server.mjs')],{cwd:apiDir,env:{PATH:process.env.PATH,SK_API_PORT:String(apiPort),SK_API_HOST:'127.0.0.1',SK_DB_HOST:sockDir,SK_DB_PORT:String(pgPort),SK_DB_NAME:'sk_translines',SK_DB_USER:'sk_test_reader',SK_DB_PASSWORD:'test-only-reader',SK_DB_WRITE_USER:'sk_test_writer',SK_DB_WRITE_PASSWORD:'test-only-writer',SK_FEEDBACK_DIR:path.join(tmp,'feedback')},stdio:['ignore','pipe','pipe']});
  apiProc.stdout.on('data',d=>apiLog+=d);apiProc.stderr.on('data',d=>apiLog+=d);
  for(let i=0;i<100;i++){try{const r=await fetch(`http://127.0.0.1:${apiPort}/health`);if(r.ok)return;}catch{}await new Promise(r=>setTimeout(r,100));}
  throw Error('API did not start:\n'+apiLog);
@@ -354,6 +354,25 @@ async function run(){
   const c=await api('POST','/api/training/courses',{token:root,body:{title:'Induction'}});expectStatus(c,201);
   const l=await api('POST','/api/training/lessons',{token:root,body:{course_id:Number(c.json.id),title:'Welcome'}});expectStatus(l,201);
   expectStatus(await api('POST','/api/training/progress',{token:erin,body:{lesson_id:Number(l.json.id),completed:true}}),200);
+ });
+
+ // ---------- feedback ----------
+ await step('feedback capture ownership and admin review',async()=>{
+  const created=await api('POST','/api/feedback',{token:erin,body:{feedback_type:'Improvement',impact:'High',description:'Make this clearer',points:['First point'],module:'Operations',screen_id:'ops/lr',route:'ops/lr',mode:'Practice',route_params:{lrNo:'LR-1'},client_context:{viewport:[390,844]}}});expectStatus(created,201);
+  const fid=created.json.item.id;
+  const mine=await api('GET','/api/feedback',{token:erin});expectStatus(mine,200);assert.equal(mine.json.admin,false);assert.ok(mine.json.items.some(x=>String(x.id)===String(fid)));
+  const adminList=await api('GET','/api/feedback',{token:alice});expectStatus(adminList,200);assert.equal(adminList.json.admin,true);assert.ok(adminList.json.items.some(x=>String(x.id)===String(fid)));
+  expectStatus(await api('PATCH',`/api/feedback/${fid}`,{token:erin,body:{status:'Reviewing'}}),403);
+  const upd=await api('PATCH',`/api/feedback/${fid}`,{token:alice,body:{status:'Reviewing'}});expectStatus(upd,200);assert.equal(upd.json.item.status,'Reviewing');
+ });
+ await step('feedback attachment upload is protected and retrievable',async()=>{
+  const c=await api('POST','/api/feedback',{token:erin,body:{feedback_type:'Bug',impact:'Medium',description:'See attachment',screen_id:'dashboard',route:'dashboard',mode:'Company'}});const fid=c.json.item.id;
+  const up=await api('POST',`/api/feedback/${fid}/attachments`,{token:erin,body:{name:'note.txt',mime_type:'text/plain',data:Buffer.from('feedback evidence').toString('base64')}});expectStatus(up,201);
+  const aid=up.json.attachment.id;const got=await api('GET',`/api/feedback/attachments/${aid}`,{token:erin});expectStatus(got,200);assert.equal(Buffer.from(got.json.data,'base64').toString(),'feedback evidence');
+  const other=await api('POST','/api/admin/users',{token:root,body:{username:'viewer',full_name:'Viewer',role:'operator'}});tempPasswords.push(other.json.temporaryPassword);const viewer=(await login('viewer',other.json.temporaryPassword)).token;
+  expectStatus(await api('GET',`/api/feedback/attachments/${aid}`,{token:viewer}),404);
+  expectStatus(await api('GET',`/api/feedback/attachments/${aid}`,{token:alice}),200);
+  expectStatus(await api('POST',`/api/feedback/${fid}/attachments`,{token:erin,body:{name:'bad.exe',mime_type:'application/x-msdownload',data:'YQ=='}}),400);
  });
 
  // ---------- audit ----------

@@ -7,6 +7,7 @@ import { EMBLEM } from '../assets';
 import { Search, Bell, Sun, Moon, Monitor, ChevronDown, ChevronsLeft, ChevronsRight, Menu, Home, FileText, LayoutGrid, X, LogOut, Plus, Check, Building2, Lightbulb, HelpCircle, ListChecks, Columns3, Sparkles } from 'lucide-react';
 import { Avatar } from './ui';
 import { useT } from '../lib/useT';
+import { FeedbackButton } from './FeedbackButton';
 import { LangButton } from './LangSwitch';
 import { logoutERP } from '../lib/api';
 import { setAuthenticatedPrincipal, usePrincipal } from '../store/store';
@@ -410,6 +411,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <MobileDrawer />
       <BottomNav />
       <FloatingChat />
+      <FeedbackButton />
     </div>
   );
 }
