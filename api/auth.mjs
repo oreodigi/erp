@@ -8,7 +8,7 @@ export function verifyPassword(password, stored) {
 }
 export function createSession(user) {
  const token=crypto.randomBytes(32).toString('hex');
- sessions.set(crypto.createHash('sha256').update(token).digest('hex'),{user,expires:Date.now()+8*3600000});
+ sessions.set(crypto.createHash('sha256').update(token).digest('hex'),{user,userId:String(user?.id??''),expires:Date.now()+8*3600000});
  return token;
 }
 export function readSession(token) {
@@ -21,4 +21,10 @@ export function readSession(token) {
 }
 export function revokeSession(token) {
  if(typeof token==='string')sessions.delete(crypto.createHash('sha256').update(token).digest('hex'));
+}
+export function revokeUserSessions(userId) {
+ const id=String(userId??'');let n=0;
+ if(!id)return 0;
+ for(const [key,record] of sessions)if(record.userId===id){sessions.delete(key);n++;}
+ return n;
 }

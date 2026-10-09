@@ -5,15 +5,31 @@ header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 $path=parse_url($_SERVER['REQUEST_URI']??'',PHP_URL_PATH);
 $routes=['/auth/login'=>'POST','/auth/logout'=>'POST','/auth/me'=>'GET','/auth/change-password'=>'POST','/api/dashboard'=>'GET','/api/analytics'=>'GET'];
-$pathMatchesApi=preg_match('#^/api/(?:work-items(?:/[1-9][0-9]*)?|training(?:/(?:progress|courses|lessons))?)$#',(string)$path)===1;
-$pathMatchesAdminUsers=preg_match('#^/api/admin/users(?:/[1-9][0-9]*(?:/reset-password)?)?$#',(string)$path)===1;
+$method=$_SERVER['REQUEST_METHOD']??'GET';
+// Strict per-route method lists: a path matching one of these accepts only the listed methods.
+$strictRoutes=[
+ '#^/api/training$#D'=>['GET'],
+ '#^/api/training/(?:progress|courses|lessons)$#D'=>['POST'],
+ '#^/api/training/(?:me|team)$#D'=>['GET'],
+ '#^/api/training/(?:records|reset|quiz-attempts)$#D'=>['POST'],
+ '#^/api/training/settings$#D'=>['GET','PUT'],
+ '#^/api/training/users/[1-9][0-9]{0,15}$#D'=>['GET'],
+ '#^/api/admin/users$#D'=>['GET','POST'],
+ '#^/api/admin/users/[1-9][0-9]{0,15}$#D'=>['PATCH','DELETE'],
+ '#^/api/admin/users/[1-9][0-9]{0,15}/reset-password$#D'=>['POST'],
+];
+$strictMethods=null;
+foreach($strictRoutes as $pattern=>$methods){if(preg_match($pattern,(string)$path)===1){$strictMethods=$methods;break;}}
+$pathMatchesTraining=$strictMethods!==null&&strncmp((string)$path,'/api/training',13)===0;
+$pathMatchesApi=preg_match('#^/api/work-items(?:/[1-9][0-9]*)?$#D',(string)$path)===1||$pathMatchesTraining;
+$pathMatchesAdminUsers=$strictMethods!==null&&strncmp((string)$path,'/api/admin/users',16)===0;
 $pathMatchesCommunication=preg_match('#^/api/communication(?:/(?:overview|audit|conversations|tasks)|/conversations/[1-9][0-9]*(?:/(?:messages|read))?|/tasks/[1-9][0-9]*)$#',(string)$path)===1;
 $pathMatchesState=$path==='/api/erp/state';
 $pathMatchesDashboardLayout=$path==='/api/dashboard-layout';
 if($pathMatchesState)$routes[$path]=$_SERVER['REQUEST_METHOD']??'GET';
 if($pathMatchesDashboardLayout)$routes[$path]=$_SERVER['REQUEST_METHOD']??'GET';
-if($pathMatchesApi)$routes[$path]=$_SERVER['REQUEST_METHOD']??'GET';
-if($pathMatchesAdminUsers)$routes[$path]=$_SERVER['REQUEST_METHOD']??'GET';
+if($pathMatchesApi&&!$pathMatchesTraining)$routes[$path]=$method;
+if($strictMethods!==null)$routes[$path]=in_array($method,$strictMethods,true)?$method:$strictMethods[0];
 if($pathMatchesCommunication)$routes[$path]=$_SERVER['REQUEST_METHOD']??'GET';
 if(!isset($routes[$path])){http_response_code(404);echo json_encode(['error'=>'Not found']);exit;}
 if(($_SERVER['REQUEST_METHOD']??'')!==$routes[$path]){http_response_code(405);echo json_encode(['error'=>'Method not allowed']);exit;}

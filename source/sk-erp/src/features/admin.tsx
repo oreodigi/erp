@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useDB, useUI, A, lookup, useStore, getDB, hasLegacy } from '../store/store';
+import { useDB, useUI, A, lookup, useStore, getDB, hasLegacy, usePrincipal, getPrincipal, setAuthenticatedPrincipal } from '../store/store';
 import { PageHeader, KPI, StatusBadge, Field, Input, Select, Textarea, Radio, FormSection, DocNo, Card, Check, Stat, EmptyState, Tabs, Toggle, Avatar, Segmented } from '../components/ui';
 import { DataTable } from '../components/DataTable';
 import { Drawer, Modal } from '../components/overlays';
@@ -118,13 +118,16 @@ export function Roles() {
 export function ChangePassword() {
   const [f, setF] = useState({ old: '', pw: '', re: '' });
   const toast = useUI((s) => s.toast);
-  const score = [/.{8,}/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((r) => r.test(f.pw)).length;
+  // Server rule (api/users.mjs): 12–256 characters with letters and numbers.
+  const score = [/.{12,}/, /[A-Za-z]/, /[0-9]/, /[^A-Za-z0-9]|[A-Z].*[a-z]|[a-z].*[A-Z]/].filter((r) => r.test(f.pw)).length;
+  const principal = usePrincipal((s) => s.principal);
   const err = f.re && f.pw !== f.re ? 'Passwords do not match' : '';
   const [busy, setBusy] = useState(false);
   return (
     <div className="max-w-lg">
-      <PageHeader eyebrow="Users & Access" title="Change password" subtitle="Use at least 8 characters with a capital letter, a number and a symbol." />
-      <Card><form className="grid gap-3" onSubmit={async (e) => { e.preventDefault(); if (!f.old) return toast('Enter your current password', 'bad'); if (score < 3) return toast('Choose a stronger password', 'bad'); if (err) return toast(err, 'bad'); setBusy(true); try { await changeOwnPassword(f.old, f.pw); toast('Password changed', 'ok', 'Use it next time you sign in'); setF({ old: '', pw: '', re: '' }); } catch (e) { toast('Password change failed', 'bad', e instanceof Error ? e.message : 'Request failed'); } finally { setBusy(false); } }}>
+      <PageHeader eyebrow="Users & Access" title="Change password" subtitle="Use at least 12 characters with letters and numbers. A mix of capital letters and symbols makes it stronger." />
+      {principal?.must_change_password && <div role="alert" className="mb-4 rounded-xl border border-warn/40 bg-warn/[.08] p-3 text-[13px]"><b>Please set your own password.</b> You signed in with a temporary password from your administrator. Change it now before you continue.</div>}
+      <Card><form className="grid gap-3" onSubmit={async (e) => { e.preventDefault(); if (!f.old) return toast('Enter your current password', 'bad'); if (!/.{12,}/.test(f.pw) || !/[A-Za-z]/.test(f.pw) || !/[0-9]/.test(f.pw)) return toast('Use at least 12 characters with letters and numbers', 'bad'); if (err) return toast(err, 'bad'); setBusy(true); try { await changeOwnPassword(f.old, f.pw); toast('Password changed', 'ok', 'Use it next time you sign in'); const p = getPrincipal(); if (p?.must_change_password) { setAuthenticatedPrincipal({ ...p, must_change_password: false }); useUI.getState().nav('help'); } setF({ old: '', pw: '', re: '' }); } catch (e) { toast('Password change failed', 'bad', e instanceof Error ? e.message : 'Request failed'); } finally { setBusy(false); } }}>
         <Field label="Old password"><Input id="pw-old" type="password" autoComplete="current-password" value={f.old} onChange={(e) => setF({ ...f, old: e.target.value })} /></Field>
         <Field label="New password"><Input id="pw-new" type="password" autoComplete="new-password" value={f.pw} onChange={(e) => setF({ ...f, pw: e.target.value })} /></Field>
         <div className="flex gap-1">{[0, 1, 2, 3].map((i) => <span key={i} className={cls('h-1.5 flex-1 rounded-full', i < score ? (score < 3 ? 'bg-warn' : 'bg-ok') : 'bg-line')} />)}</div>

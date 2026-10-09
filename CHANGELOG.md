@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-09 — Role-Based Training Academy & User Management
+
+- Added server-backed user lifecycle administration and per-user RBAC overrides.
+- Added persistent employee training records, quiz attempts, readiness settings and admin/team training APIs.
+- Added role-aware Academy curriculum, onboarding, lessons/audio, workflows, isolated practice, quizzes/final assessments, glossary, readiness and weak-topic recommendations.
+- Added contextual Screen Help and server-tracked hints/tours across all 123 meaningful ERP routes.
+- Added global Practice Mode safety banner and fixed sample-state isolation so practice cannot overwrite shared company state.
+- Added Admin Training Dashboard, employee training profiles and coverage matrix.
+- Added `npm run test:training` route/content integrity and training-engine unit tests.
+- API integration suite: 33/33 passing; frontend production build and training tests passing.
+
 ## 2026-10-09 — ERP demo expansion (last 12 hours)
 
 ### HR & Payroll
