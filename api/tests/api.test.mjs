@@ -375,6 +375,11 @@ async function run(){
   expectStatus(await api('POST',`/api/feedback/${fid}/attachments`,{token:erin,body:{name:'bad.exe',mime_type:'application/x-msdownload',data:'YQ=='}}),400);
  });
 
+ await step('feedback analytics are admin-only and aggregate review hotspots',async()=>{
+  expectStatus(await api('GET','/api/feedback/stats',{token:erin}),403);
+  const r=await api('GET','/api/feedback/stats',{token:alice});expectStatus(r,200);
+  assert.ok(Array.isArray(r.json.byModule));assert.ok(Array.isArray(r.json.byScreen));assert.ok(Array.isArray(r.json.byRole));assert.ok(Array.isArray(r.json.byType));
+ });
  await step('feedback discussion separates internal admin notes',async()=>{
   const c=await api('POST','/api/feedback',{token:erin,body:{feedback_type:'Confusing',impact:'Low',description:'Discussion test',screen_id:'dashboard',route:'dashboard',mode:'Company'}});const fid=c.json.item.id;
   expectStatus(await api('POST',`/api/feedback/${fid}/comments`,{token:erin,body:{body:'User clarification',internal:true}}),201);

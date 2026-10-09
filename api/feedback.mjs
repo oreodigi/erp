@@ -26,6 +26,14 @@ export async function handleFeedback({path,method,url,user,readBody,pool,writePo
    const r=await pool.query(select(admin)+` WHERE ${where} ORDER BY f.created_at DESC LIMIT 300`,args);
    json(res,200,{items:r.rows,admin});return true;
   }
+  if(path==='/api/feedback/stats'&&method==='GET'){
+   if(!admin)throw fail(403,'Admin permission required');
+   const byModule=await pool.query(`SELECT COALESCE(NULLIF(module,''),'Unspecified') label,count(*)::int total,count(*) FILTER (WHERE status NOT IN ('Verified','Closed','Duplicate','Not Planned'))::int open,count(*) FILTER (WHERE impact='Blocking' AND status NOT IN ('Verified','Closed','Duplicate','Not Planned'))::int blocking FROM app.feedback GROUP BY 1 ORDER BY open DESC,total DESC LIMIT 20`);
+   const byScreen=await pool.query(`SELECT COALESCE(NULLIF(screen_id,''),'Unspecified') label,count(*)::int total,count(*) FILTER (WHERE status NOT IN ('Verified','Closed','Duplicate','Not Planned'))::int open,count(*) FILTER (WHERE feedback_type='Confusing')::int confusing FROM app.feedback GROUP BY 1 ORDER BY confusing DESC,total DESC LIMIT 20`);
+   const byRole=await pool.query(`SELECT COALESCE(NULLIF(u.role,''),'Unspecified') label,count(*)::int total,count(*) FILTER (WHERE f.status NOT IN ('Verified','Closed','Duplicate','Not Planned'))::int open FROM app.feedback f JOIN app.users u ON u.id=f.user_id GROUP BY 1 ORDER BY total DESC`);
+   const byType=await pool.query(`SELECT feedback_type label,count(*)::int total FROM app.feedback GROUP BY 1 ORDER BY total DESC`);
+   json(res,200,{byModule:byModule.rows,byScreen:byScreen.rows,byRole:byRole.rows,byType:byType.rows});return true;
+  }
   if(path==='/api/feedback'&&method==='POST'){
    if(!writePool)throw fail(503,'Feedback write service unavailable');
    const d=await readBody();if(!obj(d)||!TYPES.has(d.feedback_type)||!IMPACT.has(d.impact))throw fail(400,'Invalid feedback');

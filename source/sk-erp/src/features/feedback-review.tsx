@@ -1,14 +1,14 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {BarChart3,CheckCircle2,Clock3,MessageSquare,Paperclip,RefreshCw,Search,UserRound} from 'lucide-react';
-import {commentFeedback,fetchAdminUsers,listFeedback,openFeedbackAttachment,updateFeedback,type FeedbackItem,type AdminAuthUser} from '../lib/api';
+import {commentFeedback,fetchAdminUsers,fetchFeedbackStats,listFeedback,openFeedbackAttachment,updateFeedback,type FeedbackItem,type FeedbackStats,type AdminAuthUser} from '../lib/api';
 
 const STATUSES=['New','Reviewing','Accepted','Planned','In Development','Ready for Testing','Fixed','Verified','Closed','Duplicate','Not Planned','Need More Information'];
 const IMPACT=['Low','Medium','High','Blocking'];
 const active=s=>!['Verified','Closed','Duplicate','Not Planned'].includes(s);
 
 export function FeedbackReview(){
- const [items,setItems]=useState<FeedbackItem[]>([]),[users,setUsers]=useState<AdminAuthUser[]>([]),[selected,setSelected]=useState<string>(''),[q,setQ]=useState(''),[status,setStatus]=useState('Active'),[module,setModule]=useState('All'),[impact,setImpact]=useState('All'),[loading,setLoading]=useState(true),[msg,setMsg]=useState(''),[note,setNote]=useState(''),[internal,setInternal]=useState(true),[resolution,setResolution]=useState('');
- const load=async()=>{setLoading(true);setMsg('');try{const [f,u]=await Promise.all([listFeedback(),fetchAdminUsers()]);setItems(f.items);setUsers(u.users.filter(x=>x.active));if(!selected&&f.items[0])setSelected(String(f.items[0].id))}catch(e:any){setMsg(e.message)}finally{setLoading(false)}};
+ const [items,setItems]=useState<FeedbackItem[]>([]),[users,setUsers]=useState<AdminAuthUser[]>([]),[stats,setStats]=useState<FeedbackStats|null>(null),[selected,setSelected]=useState<string>(''),[q,setQ]=useState(''),[status,setStatus]=useState('Active'),[module,setModule]=useState('All'),[impact,setImpact]=useState('All'),[loading,setLoading]=useState(true),[msg,setMsg]=useState(''),[note,setNote]=useState(''),[internal,setInternal]=useState(true),[resolution,setResolution]=useState('');
+ const load=async()=>{setLoading(true);setMsg('');try{const [f,u,s]=await Promise.all([listFeedback(),fetchAdminUsers(),fetchFeedbackStats()]);setItems(f.items);setUsers(u.users.filter(x=>x.active));setStats(s);if(!selected&&f.items[0])setSelected(String(f.items[0].id))}catch(e:any){setMsg(e.message)}finally{setLoading(false)}};
  useEffect(()=>{void load()},[]);
  const modules=useMemo(()=>['All',...Array.from(new Set(items.map(x=>x.module||'Unspecified'))).sort()], [items]);
  const filtered=useMemo(()=>items.filter(x=>(status==='All'||(status==='Active'?active(x.status):x.status===status))&&(module==='All'||(x.module||'Unspecified')===module)&&(impact==='All'||x.impact===impact)&&(!q||[x.feedback_no,x.description,x.full_name,x.username,x.screen_id,x.record_no].join(' ').toLowerCase().includes(q.toLowerCase()))),[items,status,module,impact,q]);
@@ -23,6 +23,10 @@ export function FeedbackReview(){
   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
    {[['New',counts.new,MessageSquare],['Open',counts.active,Clock3],['Blocking',counts.blocking,BarChart3],['Ready for testing',counts.testing,CheckCircle2],['Verified / closed',counts.closed,CheckCircle2]].map(([l,n,I]:any)=><div className="card p-3" key={l}><div className="flex items-center gap-2 text-muted text-[11px] font-semibold"><I size={14}/>{l}</div><div className="text-2xl font-bold mt-1">{n}</div></div>)}
   </div>
+  {stats&&<div className="grid lg:grid-cols-2 gap-3">
+   <div className="card p-4"><div className="font-semibold text-[13px] mb-3">Feedback hotspots by module</div><div className="space-y-2">{stats.byModule.slice(0,6).map(x=><button key={x.label} onClick={()=>setModule(x.label)} className="w-full text-left grid grid-cols-[1fr_auto_auto] gap-3 items-center text-[12px]"><span className="truncate">{x.label}</span><span className="text-muted">{x.open} open</span><span className={x.blocking?'font-bold':''}>{x.blocking} blocking</span></button>)}{!stats.byModule.length&&<div className="text-muted text-[12px]">No module feedback yet.</div>}</div></div>
+   <div className="card p-4"><div className="font-semibold text-[13px] mb-3">Most confusing screens</div><div className="space-y-2">{stats.byScreen.filter(x=>x.confusing>0).slice(0,6).map(x=><button key={x.label} onClick={()=>setQ(x.label)} className="w-full text-left grid grid-cols-[1fr_auto_auto] gap-3 items-center text-[12px]"><span className="truncate">{x.label}</span><span className="text-muted">{x.total} total</span><span className="font-semibold">{x.confusing} confusing</span></button>)}{!stats.byScreen.some(x=>x.confusing>0)&&<div className="text-muted text-[12px]">No confusing-screen feedback yet.</div>}</div></div>
+  </div>}
   <div className="card p-3 grid md:grid-cols-4 gap-2">
    <div className="relative"><Search size={14} className="absolute left-3 top-3 text-muted"/><input className="input w-full pl-9" placeholder="Search feedback, user, screen…" value={q} onChange={e=>setQ(e.target.value)}/></div>
    <select className="input" value={status} onChange={e=>setStatus(e.target.value)}><option>Active</option><option>All</option>{STATUSES.map(x=><option key={x}>{x}</option>)}</select>

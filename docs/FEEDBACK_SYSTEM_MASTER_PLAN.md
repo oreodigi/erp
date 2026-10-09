@@ -28,11 +28,11 @@ Administration → Feedback & Review now provides KPI cards, search/status/modul
 
 Lifecycle: New → Reviewing → Accepted → Planned → In Development → Ready for Testing → Fixed → Verified → Closed. Alternate: Duplicate / Not Planned / Need More Information.
 
-## Stage 3 — ERP/training integration
-Section-level feedback context for important cards, Training lesson/exercise context, Practice mode context, fix-verification by submitter, admin screen feedback counters.
+## Stage 3 — ERP/training integration — IN PROGRESS
+Completed: screen/route/record context, Company/Practice mode context, Help & Training coverage for Feedback & Review, user-visible discussion, resolution visibility in My Feedback, and submitter fix verification (Verified / Still needs work). Remaining: targeted section-level context for selected high-value cards and direct lesson/exercise identifiers where useful.
 
-## Stage 4 — Analytics & QA
-Module/role/screen/type/status analytics, most confusing screens, exports, mobile/desktop QA, attachment security tests, API integration tests and end-to-end acceptance.
+## Stage 4 — Analytics & QA — IN PROGRESS
+Completed: admin-only module/screen/role/type aggregation API, feedback hotspot panel, most-confusing-screen panel, attachment security tests and API integration coverage. Remaining: export, dedicated mobile/desktop visual QA and final end-to-end acceptance pass.
 
 ## Security/demo rules
 - Never store uploads in PostgreSQL blobs.

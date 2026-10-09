@@ -15,6 +15,7 @@ $strictRoutes=[
  '#^/api/training/settings$#D'=>['GET','PUT'],
  '#^/api/training/users/[1-9][0-9]{0,15}$#D'=>['GET'],
  '#^/api/feedback$#D'=>['GET','POST'],
+ '#^/api/feedback/stats$#D'=>['GET'],
  '#^/api/feedback/[1-9][0-9]{0,15}$#D'=>['GET','PATCH'],
  '#^/api/feedback/[1-9][0-9]{0,15}/attachments$#D'=>['POST'],
  '#^/api/feedback/[1-9][0-9]{0,15}/comments$#D'=>['POST'],

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-09 — Feedback Stage 3/4 integration
+
+- My Feedback now shows team discussion and resolution notes and lets submitters reply with clarification.
+- Fixed items now support submitter verification or a Still needs work return to review.
+- Added admin-only feedback analytics grouped by module, screen, role and feedback type.
+- Added module hotspot and most-confusing-screen panels to Feedback & Review.
+- Added API regression coverage for analytics permissions and aggregation.
+
+
 ## 2026-10-09 — Feedback Review Centre Stage 2
 
 - Added Administration → Feedback & Review with KPI cards and searchable status/module/impact filters.
