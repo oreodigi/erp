@@ -4,7 +4,7 @@ import { workCount } from '../features/work';
 import { useUI, useDB, useStore, A, lookup, getAuthenticatedRoleCode } from '../store/store';
 import { cls, ago } from '../lib/util';
 import { EMBLEM } from '../assets';
-import { Search, Bell, Sun, Moon, Monitor, ChevronDown, ChevronsLeft, ChevronsRight, Menu, Home, FileText, LayoutGrid, X, LogOut, Plus, Check, Building2, Lightbulb, HelpCircle, ListChecks, Columns3, Sparkles } from 'lucide-react';
+import { Search, Bell, Sun, Moon, Monitor, ChevronDown, ChevronsLeft, ChevronsRight, Menu, Home, FileText, LayoutGrid, X, LogOut, KeyRound, Plus, Check, Building2, Lightbulb, HelpCircle, ListChecks, Columns3, Sparkles } from 'lucide-react';
 import { Avatar } from './ui';
 import { useT } from '../lib/useT';
 import { FeedbackButton } from './FeedbackButton';
@@ -259,6 +259,7 @@ function UserMenu() {
         <div className="fixed inset-0 z-40" onClick={() => setO(false)} />
         <div className="fixed sm:absolute left-3 right-3 sm:left-auto sm:right-0 top-14 sm:top-11 z-50 sm:w-72 card shadow-pop animate-in py-1.5">
           <div className="px-3.5 py-2 border-b border-line mb-1"><div className="font-semibold text-[13px]">{user.firstName} {user.lastName}</div><div className="text-[12px] text-muted">{user.email}</div></div>
+          <button onClick={() => { useUI.getState().nav('access/password'); setO(false); }} className="w-full flex items-center gap-2 px-3.5 py-2 text-[12.5px] hover:bg-surface2"><KeyRound size={14} /> {t('Change password')}</button>
           <div className="border-t border-line mt-1 pt-1">
             <button onClick={async () => { await logoutERP(); setAuthenticatedPrincipal(null); set({ signedIn: false }); window.dispatchEvent(new Event('skt-erp-logout')); setO(false); }} className="w-full flex items-center gap-2 px-3.5 py-2 text-[12.5px] hover:bg-surface2"><LogOut size={14} /> {t('Sign out')}</button>
           </div>

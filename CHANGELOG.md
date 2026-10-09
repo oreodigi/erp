@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-09 — User management simplification
+
+- Consolidated account administration around the server-backed ERP Users screen (`app.users`).
+- Removed duplicate Credential Administration and Change Password entries from the sidebar; password changes now live in the account menu.
+- Replaced the legacy editable demo-role screen with clear role templates and per-user permission exceptions.
+- Reduced new role assignments to 10 business-facing base roles while retaining legacy role compatibility for existing accounts.
+- Kept HR Employees conceptually separate from ERP login accounts to avoid mixing personnel and security records.
+
+
 ## 2026-10-09 — Feedback Stage 4 acceptance hardening
 
 - Added end-to-end API acceptance coverage from employee feedback capture through admin review/fix to employee verification.

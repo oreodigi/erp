@@ -11,8 +11,9 @@ import { cls, fmtDT } from '../lib/util';
 import { fetchAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser, resetAdminUserPassword, fetchTrainingTeam, fetchTrainingSettings, type AdminAuthUser, type AdminUserInput } from '../lib/api';
 import { normaliseSettings, DEFAULT_READINESS } from '../training/config';
 import { STATUS_TONE, type Progress } from '../training/progress';
-import { Drawer, Modal, SERVER_ROLES, roleLabel, employeeProgress, When, PasswordReveal, Reason, Notice, toastError, errMsg, relTime } from './admin-ui/shared';
+import { Drawer, Modal, SERVER_ROLES, PRIMARY_ROLES, roleLabel, roleDefaultMenus, employeeProgress, When, PasswordReveal, Reason, Notice, toastError, errMsg, relTime } from './admin-ui/shared';
 import { PermissionEditor, normaliseOverrides } from './admin-ui/PermissionEditor';
+import { ALL_ITEMS } from '../nav';
 import { Users as UsersIcon, UserPlus, UserCheck, UserX, KeyRound, Trash2, Pencil, GraduationCap, ShieldCheck, Lock, RefreshCw, Clock, AlertTriangle, Eye, EyeOff, Info } from 'lucide-react';
 
 const MANAGER_ROLES = new Set(['superadmin', 'admin']);
@@ -32,6 +33,28 @@ const statusOf = (u: AdminAuthUser): AccountStatus => (u.deleted_at ? 'Deleted' 
 const STATUS_TONES: Record<AccountStatus, string> = { Active: 'ok', Inactive: 'muted', 'Must change password': 'warn', Deleted: 'bad' };
 
 type Guard = { edit: string | null; role: string | null; toggle: string | null; reset: string | null; remove: string | null };
+
+export function RoleTemplates() {
+  const t = useT();
+  const principal = usePrincipal((s) => s.principal);
+  const canManage = MANAGER_ROLES.has(lower(principal?.role));
+  const roles = PRIMARY_ROLES.filter(([value]) => value !== 'superadmin' || lower(principal?.role) === 'superadmin');
+  return <div>
+    <PageHeader eyebrow={t('User Management')} title={t('Roles & Permissions')} subtitle={t('Simple role templates. Individual exceptions are managed on the ERP user, so there is only one effective access model.')} />
+    {!canManage && <Notice icon={Lock} title={t('Administrator access required')} body={t('Your role and permissions are managed by an administrator.')} />}
+    <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {roles.map(([value, label]) => {
+        const menus = [...roleDefaultMenus(value)];
+        const groups = [...new Set(menus.map((key) => ALL_ITEMS.find((i) => i.key === key)?.groupLabel).filter(Boolean))];
+        return <Card key={value} title={t(label)} subtitle={t('{count} screens by default', { count: menus.length })}>
+          <div className="flex flex-wrap gap-1.5 mb-3">{groups.map((g) => <span key={g} className="chip">{t(String(g))}</span>)}</div>
+          <p className="text-[12px] text-muted">{value === 'superadmin' ? t('Full system administration. Keep this role limited to trusted administrators.') : t('Use this as the default access. Add or remove individual screens from the ERP Users page only when the job requires an exception.')}</p>
+        </Card>;
+      })}
+    </div>
+    <div className="mt-4"><Notice icon={Info} title={t('One access model')} body={t('Legacy role names remain supported for existing accounts, but new assignments use these simplified roles. No separate credential or per-user role database is used.')} /></div>
+  </div>;
+}
 
 export function UserManagement() {
   const t = useT();
@@ -322,7 +345,8 @@ function UserForm({ mode, user, actorSuper, actorId, guard, branches, existing, 
   const err = (k: string) => (touched && errors[k] ? t(errors[k]) : undefined);
   const self = !!user && String(user.id) === actorId;
   const roleLocked = mode === 'edit' && !!guard?.role;
-  const roleOptions = SERVER_ROLES.filter(([v]) => v !== 'superadmin' || actorSuper || lower(user?.role) === 'superadmin').map(([value, label]) => ({ value, label: t(label) }));
+  const assignable = [...PRIMARY_ROLES, ...(user && !PRIMARY_ROLES.some(([v]) => v === lower(user.role)) ? [[lower(user.role), `${roleLabel(user.role)} · legacy` ] as [string, string]] : [])];
+  const roleOptions = assignable.filter(([v]) => v !== 'superadmin' || actorSuper || lower(user?.role) === 'superadmin').map(([value, label]) => ({ value, label: t(label) }));
   const ov = normaliseOverrides(f.role, f.extra, f.denied);
   const roleChanged = mode === 'edit' && lower(user?.role) !== f.role;
   const permChanged = mode === 'edit' && (!sameSet(ov.extra, user?.extra_permissions) || !sameSet(ov.denied, user?.denied_permissions));

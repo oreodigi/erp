@@ -147,13 +147,11 @@ export const NAV: NavGroup[] = [
   { key: 'reports', label: 'Reports & MIS', icon: BarChart3, items: [{ key: 'reports', label: 'Reports & MIS', icon: BarChart3, legacy: ['Reports/* (42)'] }, { key: 'prints', label: 'Print Formats', icon: Printer, legacy: ['Prints/* (33)'] }] },
   { key: 'masters', label: 'Masters', icon: Database, items: [{ key: 'masters', label: 'Masters', icon: Database, legacy: ['MasterPages/* (58)'] }] },
   {
-    key: 'access', label: 'Users & Access', icon: Shield, items: [
-      { key: 'access/users', label: 'Users', icon: Users, legacy: ['MasterPages/UserList', 'UserDetail', 'UserPerRoleList', 'Admin/ResetPassword'] },
+    key: 'access', label: 'User Management', icon: Shield, items: [
+      { key: 'access/users', label: 'ERP Users', icon: Users, legacy: ['MasterPages/UserList', 'UserDetail', 'UserPerRoleList', 'Admin/ResetPassword'] },
       { key: 'access/roles', label: 'Roles & Permissions', icon: Shield, legacy: ['MasterPages/RoleList', 'RoleDetail', 'Admin/MenuPerUser'] },
-      { key: 'access/password', label: 'Change Password', icon: KeyRound, legacy: ['Admin/ChangePassword'] },
     ],
   },
-  { key: 'superadmin', label: 'Super Admin', icon: ShieldCheck, items: [{ key: 'access/credentials', label: 'Credential Administration', icon: KeyRound }] },
   { key: 'comms-admin', label: 'Communication Admin', icon: ShieldCheck, items: [{ key: 'communication/audit', label: 'Communication Oversight', icon: ShieldCheck }] },
   {
     key: 'admin', label: 'Administration', icon: Settings, items: [

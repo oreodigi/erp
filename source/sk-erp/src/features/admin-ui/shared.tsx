@@ -20,7 +20,12 @@ export const SERVER_ROLES: [string, string][] = [
   ['branch_admin', 'Branch Admin'], ['branch_user', 'Branch User'], ['container', 'Container'], ['hr', 'HR'], ['onboarding', 'Onboarding'],
   ['storeincharge', 'Store Incharge'], ['storedirector', 'Store Director'], ['fleetmanager', 'Fleet Manager'], ['warehousemanager', 'Warehouse Manager'], ['workshopmanager', 'Workshop Manager'],
 ];
-const ROLE_NAME = new Map(SERVER_ROLES);
+export const PRIMARY_ROLES: [string, string][] = [
+  ['superadmin', 'Super Admin'], ['admin', 'Administrator'], ['operator', 'Operations'], ['accounts', 'Finance & Accounts'],
+  ['fleetmanager', 'Fleet'], ['warehousemanager', 'Warehouse'], ['workshopmanager', 'Workshop / Inventory'],
+  ['hr', 'HR & Payroll'], ['customer_care', 'Customer Care'], ['branch_user', 'Branch User'],
+];
+const ROLE_NAME = new Map(SERVER_ROLES.concat(PRIMARY_ROLES));
 export const roleLabel = (role: string) => ROLE_NAME.get(String(role || '').toLowerCase()) || role || '—';
 
 /** Server role → local ERP role code (same table as store.ts localRoleCode). */

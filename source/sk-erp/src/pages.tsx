@@ -7,7 +7,7 @@ import { QuickBooking } from './features/book';
 import { Academy } from './features/academy';
 import { TrainingDashboard, TrainingCoverage } from './features/training-admin';
 import { FeedbackReview } from './features/feedback-review';
-import { UserManagement } from './features/user-admin';
+import { UserManagement, RoleTemplates } from './features/user-admin';
 import { Journeys } from './features/journeys';
 import { CashPlan } from './features/cashplan';
 import { TimeLimits } from './features/timelimits';
@@ -22,7 +22,7 @@ import { TruckChecklist, JobCards, JobCardApproval, SparesStock, SparesMaster, S
 import { Customer360, Agreements, RateContracts, TransporterRates, HamaliRates, Documents, Support } from './features/customers';
 import { ReportsHub } from './features/reports';
 import { MastersHub, CrudPage, DEFS } from './features/masters';
-import { Users, Roles, ChangePassword, CredentialAdministration, Corrections, Announcements, ExcelImport, LRBarcodes, Settings, PrintGallery, LegacyMap } from './features/admin';
+import { ChangePassword, Corrections, Announcements, ExcelImport, LRBarcodes, Settings, PrintGallery, LegacyMap } from './features/admin';
 import { Communication, CommunicationTasks, CommunicationEnquiries, CommunicationAudit } from './features/communication';
 import { MarketingDashboard, Leads, LeadPipeline, FollowUps, Campaigns, Deals, DealPipeline, Quotations, SalesTargets, SalesPerformance, CRMReports, SalesHandoff } from './features/marketing';
 const SmartLoadPlanning = lazy(() => import('./features/smart-load-planning').then(m => ({ default: m.SmartLoadPlanning })));
@@ -50,7 +50,7 @@ export const PAGES: Record<string, React.ComponentType> = {
   'hr/employees': Employees, 'hr/leaves': Leaves, 'hr/shifts': ShiftRoster, 'hr/attendance': Attendance, 'hr/holidays': Holidays, 'hr/designations': Designations, 'hr/departments': Departments, 'hr/appreciation': Appreciation,
   'payroll/run': Payroll, 'payroll/salary': EmployeeSalary, 'payroll/tds': TDS, 'payroll/expenses': PayrollExpenses, 'payroll/overtime': OvertimeRequests, 'payroll/reports': PayrollReports,
   reports: ReportsHub, prints: PrintGallery, masters: MastersHub,
-  'access/users': UserManagement, 'access/roles': Roles, 'access/password': ChangePassword,
+  'access/users': UserManagement, 'access/roles': RoleTemplates, 'access/password': ChangePassword,
   'access/credentials': UserManagement,
   communication: Communication, 'communication/tasks': CommunicationTasks, 'communication/enquiries': CommunicationEnquiries, 'communication/audit': CommunicationAudit,
   'admin/corrections': Corrections, 'admin/announcements': Announcements, 'admin/import': ExcelImport, 'admin/barcode': LRBarcodes, 'admin/settings': Settings, 'admin/time-limits': TimeLimits, 'admin/training': TrainingDashboard, 'admin/training-coverage': TrainingCoverage, 'admin/feedback': FeedbackReview, 'admin/legacy-map': LegacyMap,
