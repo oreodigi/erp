@@ -54,23 +54,45 @@ const versionFor = (src: Source) => (src === 'legacy' ? LEGACY_VERSION : SEED_VE
 async function freshDB(src: Source): Promise<any> { return src === 'legacy' ? loadLegacy() : buildSeed(); }
 let saveTimer: any = null;
 let remoteVersion = 0;
-let authenticatedPrincipal: { username: string; role: string } | null = null;
-export function setAuthenticatedPrincipal(principal: { username: string; role: string } | null) {
+let authenticatedPrincipal: Principal | null = null;
+export type Principal = { id?: string; username: string; role: string; full_name?: string; branch_code?: string; department?: string; designation?: string; extra_permissions?: string[]; denied_permissions?: string[]; must_change_password?: boolean };
+export function setAuthenticatedPrincipal(principal: Principal | null) {
   authenticatedPrincipal = principal;
+  usePrincipal.setState({ principal });
 }
+/** The signed-in server account (app.users). Reactive so permission/profile changes re-render the shell. */
+export const usePrincipal = create<{ principal: Principal | null }>(() => ({ principal: null }));
+export const getPrincipal = () => authenticatedPrincipal;
 export function getAuthenticatedRoleCode() { return localRoleCode(String(authenticatedPrincipal?.role || '')); }
 function localRoleCode(role: string) {
   const key = String(role || '').trim().toLowerCase();
   return ({ superadmin: 'SA', 'super-admin': 'SA', admin: 'AD', administrator: 'AD', manager: 'AD', operator: 'OP', operations: 'OP', dispatcher: 'OP', finance: 'AC', accounts: 'AC', accountant: 'AC', finance_approver: 'AC', customer_care: 'CC', 'customer-care': 'CC', customerrelations: 'CC', fleet: 'CO', fleetmanager: 'CO', workshop: 'SI', workshopmanager: 'SI', inventory: 'SI', warehousemanager: 'SI', store: 'SI', storeincharge: 'SI', storedirector: 'SI', hr: 'HR', onboarding: 'HR', branch_admin: 'BU', branch_user: 'BU', container: 'BU' } as Record<string, string>)[key] || String(role || '').toUpperCase();
 }
+// Saving rules (safety-critical):
+//  * Only the shared PostgreSQL document loaded by boot() is ever written back to the server (serverBacked = true).
+//  * Practice / sample data lives only in this browser (IndexedDB) and must never reach PUT /api/erp/state.
+let serverBacked = false;
+let serverSavePending = false;
+export const isServerBacked = () => serverBacked && useStore.getState().source === 'legacy';
 function scheduleSave() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(async () => {
-    const { db, ready } = useStore.getState();
-    if (!ready || !remoteVersion) return;
-    try { const saved = await saveERPState(db, remoteVersion); remoteVersion = Number(saved.version); }
-    catch (e) { console.error('ERP state save failed', e); useUI.getState().toast('Save failed', 'bad', e instanceof Error ? e.message : 'The shared record changed or the API is unavailable.'); }
-  }, 900);
+  if (!isServerBacked()) {
+    serverSavePending = false;
+    saveTimer = setTimeout(() => { const { db, source, ready } = useStore.getState(); if (ready && source !== 'legacy') void idbSet(keyFor(source), db); }, 600);
+    return;
+  }
+  serverSavePending = true;
+  saveTimer = setTimeout(() => { void flushServerSave(); }, 900);
+}
+async function flushServerSave() {
+  clearTimeout(saveTimer);
+  if (!serverSavePending) return;
+  serverSavePending = false;
+  const { db, ready } = useStore.getState();
+  // Re-check at write time: the user may have switched to practice data after the edit was scheduled.
+  if (!ready || !remoteVersion || !isServerBacked() || (db as any)?.source !== 'legacy') return;
+  try { const saved = await saveERPState(db, remoteVersion); remoteVersion = Number(saved.version); }
+  catch (e) { console.error('ERP state save failed', e); useUI.getState().toast('Save failed', 'bad', e instanceof Error ? e.message : 'The shared record changed or the API is unavailable.'); }
 }
 function activate(db: any) {
   setAsOf(db?.asOf || null);
@@ -93,19 +115,33 @@ function activate(db: any) {
 export const useStore = create<Store>()((set, get) => ({
   db: buildSeed() as any, ready: false, source: getSourcePref(), loading: 'Loading data…',
   mutate: (fn) => { const db: any = { ...get().db }; for (const k of Object.keys(db)) if (Array.isArray(db[k])) db[k] = [...db[k]]; fn(db); set({ db }); scheduleSave(); },
-  reset: async () => { const src = get().source; set({ ready: false, loading: src === 'legacy' ? 'Restoring SK Logistics data…' : 'Restoring sample data…' }); const db = await freshDB(src); activate(db); set({ db, ready: true }); await idbSet(keyFor(src), db); },
+  reset: async () => {
+    const src = get().source;
+    // The shared company data is never "reset" from the browser – reload it from the server instead.
+    if (src === 'legacy') { await get().boot(); return; }
+    set({ ready: false, loading: 'Restoring practice data…' });
+    clearTimeout(saveTimer); serverSavePending = false;
+    const db = await freshDB(src); activate(db); set({ db, ready: true }); await idbSet(keyFor(src), db);
+  },
   switchSource: async (src) => {
-    setSourcePref(src); set({ ready: false, source: src, loading: src === 'legacy' ? 'Loading SK Logistics data…' : 'Loading sample data…' });
+    if (src === 'legacy') { await get().boot(); return; }
+    await flushServerSave(); // finish any pending real-data save before leaving the shared document
+    serverBacked = false; clearTimeout(saveTimer);
+    setSourcePref(src); set({ ready: false, source: src, loading: 'Loading practice data…' });
     let db: any = await idbGet(keyFor(src));
     if (!db || db.version !== versionFor(src)) { db = await freshDB(src); idbSet(keyFor(src), db); }
+    db.source = src;
     activate(db); set({ db, ready: true });
   },
   boot: async () => {
+    clearTimeout(saveTimer); serverSavePending = false; serverBacked = false;
     set({ ready: false, source: 'legacy', loading: 'Loading shared PostgreSQL ERP data…' });
     const remote = await fetchERPState();
     remoteVersion = Number(remote.version);
     const db: any = { ...remote.data, source: 'legacy' };
     activate(db);
+    serverBacked = true;
+    setSourcePref('legacy');
     set({ db, ready: true, source: 'legacy', loading: '' });
   },
 }));

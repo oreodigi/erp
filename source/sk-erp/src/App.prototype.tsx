@@ -1,5 +1,5 @@
 import React, { useEffect, Suspense } from 'react';
-import { useUI, useDB, useStore } from './store/store';
+import { useUI, useDB, useStore, usePrincipal } from './store/store';
 import { LOGO } from './assets';
 import { AppShell, useRole } from './components/AppShell';
 import { Toasts, ConfirmHost, CommandPalette } from './components/overlays';
@@ -11,6 +11,8 @@ import { ShieldAlert } from 'lucide-react';
 import { SignIn } from './features/signin';
 import { QuickActionHost } from './components/QuickActions';
 import { OnboardingHost, PageGuide } from './features/guide';
+import { PracticeHost } from './training/ui/PracticeHost';
+import { ScreenHelpHost } from './training/ui/ScreenHelp';
 import { OPEN_ROUTES } from './nav';
 import { setCurrentLang } from './lib/i18n';
 import { useT } from './lib/useT';
@@ -57,9 +59,11 @@ export function PrototypeERP() {
   const route = useUI((s) => s.route);
   const signedIn = useUI((s) => s.signedIn);
   const { can } = useRole();
+  // A temporary password from the administrator must be replaced before any other screen opens.
+  const mustChange = usePrincipal((s) => !!s.principal?.must_change_password);
   if (!ready) return <Loading text={loadingText} />;
   if (!signedIn) return null;
-  const key = Object.keys(PAGES).filter((k) => route === k || route.startsWith(k + '/')).sort((a, b) => b.length - a.length)[0] || 'dashboard';
+  const key = mustChange ? 'access/password' : Object.keys(PAGES).filter((k) => route === k || route.startsWith(k + '/')).sort((a, b) => b.length - a.length)[0] || 'dashboard';
   const Page = PAGES[key];
   const navKey = key.split('/').slice(0, 2).join('/');
   const allowed = can(key) || can(navKey) || OPEN_ROUTES.includes(key) || key.startsWith('dashboard') || (key === 'book' && (can('ops/lr-new') || can('ops/lr')));
@@ -74,8 +78,10 @@ export function PrototypeERP() {
       <PrintHost />
       <CommandPalette />
       <QuickActionHost />
-      <OnboardingHost />
+      {!mustChange && <OnboardingHost />}
       <ConfirmHost />
+      <PracticeHost />
+      <ScreenHelpHost />
       <VoicePlayer />
       <Toasts />
     </>

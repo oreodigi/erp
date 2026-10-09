@@ -2,10 +2,12 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 import {Pool} from 'pg';
 import {verifyPassword,hashPassword,createSession,readSession,revokeSession} from './auth.mjs';
+import {handleAdminUsers,loadProfile,accountPassword,PROFILE_COLUMNS} from './users.mjs';
 import {handleWorkItems} from './work-items.mjs';
 import {handleTraining} from './training.mjs';
 import {handleCommunication} from './communication.mjs';
-const poolConfig={host:'127.0.0.1',port:5432,database:'sk_translines',max:3,connectionTimeoutMillis:3000,idleTimeoutMillis:15000};
+const env=process.env;
+const poolConfig={host:env.SK_DB_HOST||'127.0.0.1',port:Number(env.SK_DB_PORT||5432),database:env.SK_DB_NAME||'sk_translines',max:3,connectionTimeoutMillis:3000,idleTimeoutMillis:15000};
 const pool=new Pool({...poolConfig,user:process.env.SK_DB_USER,password:process.env.SK_DB_PASSWORD});
 const writePool=process.env.SK_DB_WRITE_USER?new Pool({...poolConfig,user:process.env.SK_DB_WRITE_USER,password:process.env.SK_DB_WRITE_PASSWORD,max:2}):null;
 const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY'});res.end(JSON.stringify(data));return true;};
@@ -15,53 +17,11 @@ const queries={
  bills:'SELECT bill_id,bill_number,bill_date,net_amt,pending_amt FROM legacy.bill_detail ORDER BY bill_id DESC LIMIT 12'
 };
 const attempts=new Map();
-async function body(req,max=4096){let s='';for await(const part of req){s+=part;if(s.length>max)throw Error('Too large');}return JSON.parse(s);}
+const httpError=(status,message)=>Object.assign(new Error(message),{status});
+async function body(req,max=4096){const parts=[];let n=0;for await(const part of req){n+=part.length;if(n>max)throw httpError(413,'Request too large');parts.push(part);}const s=Buffer.concat(parts).toString('utf8');if(!s.trim())return {};try{return JSON.parse(s);}catch{throw httpError(400,'Invalid JSON');}}
 const tokenFrom=req=>{const h=req.headers.authorization||'';return h.startsWith('Bearer ')?h.slice(7):null;};
 const stateWriteRoles=new Set(['admin','superadmin','manager','operator']);
-const superAdminRoles=new Set(['superadmin']);
-const accountRoles=new Set(['superadmin','admin','manager','operator','operations','dispatcher','accounts','accountant','finance_approver','customer_care','customerrelations','branch_admin','branch_user','container','hr','onboarding','storeincharge','storedirector','fleetmanager','warehousemanager','workshopmanager']);
-const accountId=s=>/^[1-9]\d{0,15}$/.test(String(s))?String(s):null;
-const accountPassword=s=>typeof s==='string'&&s.length>=12&&s.length<=256&&/[A-Za-z]/.test(s)&&/[0-9]/.test(s);
-const generatedPassword=()=>crypto.randomBytes(18).toString('base64url');
 const layoutIds=new Set(['today','pipeline','operations','management','trend','cleanup']);
-function requireSuperAdmin(user,res){if(!superAdminRoles.has(String(user.role).toLowerCase())){json(res,403,{error:'Super Admin permission required'});return false;}return true;}
-async function adminUsers(req,res,user,path){
- if(!path.startsWith('/api/admin/users'))return false;
- if(!requireSuperAdmin(user,res))return true;
- try{
-  if(path==='/api/admin/users'&&req.method==='GET'){
-   const r=await pool.query('SELECT id,username,role,active,created_at FROM app.users ORDER BY username');
-   json(res,200,{users:r.rows});return true;
-  }
-  if(req.method==='POST'&&path.endsWith('/reset-password')){
-   const target=accountId(path.slice('/api/admin/users/'.length,-'/reset-password'.length));
-   if(!target){json(res,404,{error:'Not found'});return true;}
-   const input=await body(req),password=input?.password||generatedPassword();
-   if(!accountPassword(password))return json(res,400,{error:'Password must be 12-256 characters and include letters and numbers'});
-   const r=await writePool.query('UPDATE app.users SET password_hash=$1 WHERE id=$2 AND active=true RETURNING id,username,role',[hashPassword(password),target]);
-   if(!r.rowCount)return json(res,404,{error:'Active user not found'});
-   await writePool.query('INSERT INTO app.audit_events(actor_id,entity_type,entity_id,action,after_state) VALUES($1,$2,$3,$4,$5)',[user.id,'auth_user',target,'password_reset',{username:r.rows[0].username,role:r.rows[0].role}]);
-   return json(res,200,{user:r.rows[0],temporaryPassword:password});
-  }
-  const id=accountId(path.slice('/api/admin/users/'.length));
-  if(!id){json(res,404,{error:'Not found'});return true;}
-  if(req.method==='PATCH'){
-   const input=await body(req);
-   if(input?.role!==undefined&&(!accountRoles.has(String(input.role))||typeof input.role!=='string'))return json(res,400,{error:'Invalid role'});
-   if(input?.active===false&&String(id)===String(user.id))return json(res,400,{error:'You cannot deactivate your own account'});
-   const fields=[],values=[];
-   if(input?.role!==undefined){fields.push('role=$'+(values.length+1));values.push(input.role);}
-   if(input?.active!==undefined){if(typeof input.active!=='boolean')return json(res,400,{error:'Invalid active flag'});fields.push('active=$'+(values.length+1));values.push(input.active);}
-   if(!fields.length)return json(res,400,{error:'No changes supplied'});
-   values.push(id);
-   const r=await writePool.query('UPDATE app.users SET '+fields.join(',')+' WHERE id=$'+values.length+' RETURNING id,username,role,active,created_at',values);
-   if(!r.rowCount)return json(res,404,{error:'User not found'});
-   await writePool.query('INSERT INTO app.audit_events(actor_id,entity_type,entity_id,action,after_state) VALUES($1,$2,$3,$4,$5)',[user.id,'auth_user',id,'account_update',r.rows[0]]);
-   return json(res,200,{user:r.rows[0]});
-  }
-  return json(res,405,{error:'Method not allowed'});
- }catch(e){console.error('Admin users request failed',e.code||e.message);return json(res,503,{error:'User administration unavailable'});}
-}
 async function dashboardLayout(req,res,user){
  try{
   if(req.method==='GET'){
@@ -111,16 +71,18 @@ const server=http.createServer(async(req,res)=>{
    const key=String(input.username).trim().toLowerCase();
    const current=attempts.get(key)||{count:0,until:0};
    if(current.until>Date.now())return json(res,429,{error:'Try again later'});
-   const found=await pool.query('SELECT id,username,password_hash,role FROM app.users WHERE username=$1 AND active=true LIMIT 1',[input.username]);
+   const found=await pool.query(`SELECT ${PROFILE_COLUMNS},password_hash FROM app.users WHERE username=$1 AND active=true AND deleted_at IS NULL LIMIT 1`,[input.username]);
    const user=found.rows[0];
    if(!user||!verifyPassword(input.password,user.password_hash)){
     const count=current.count+1;attempts.set(key,{count,until:count>=5?Date.now()+15*60000:0});
     return json(res,401,{error:'Invalid credentials'});
    }
    attempts.delete(key);
+   if(writePool)await writePool.query('UPDATE app.users SET last_login_at=now() WHERE id=$1',[user.id]).catch(e=>console.error('Last login update failed',e.code||e.message));
    const token=createSession({id:user.id,username:user.username,role:user.role});
-   return json(res,200,{token,user:{id:user.id,username:user.username,role:user.role}});
-  }catch(e){console.error('Login error',e.code||e.message);return json(res,400,{error:'Login unavailable'});}
+   const {password_hash:_hash,...profile}=user;
+   return json(res,200,{token,user:profile});
+  }catch(e){console.error('Login error',e.code||e.message);return json(res,e.status===413?413:400,{error:e.status===413?e.message:'Login unavailable'});}
  }
  if(path==='/internal/dashboard'&&req.method==='GET'){
   const supplied=req.headers['x-internal-token'];
@@ -130,19 +92,25 @@ const server=http.createServer(async(req,res)=>{
  }
  const token=tokenFrom(req),user=readSession(token);
  if(!user)return json(res,401,{error:'Unauthorized'});
- if(path==='/auth/me'&&req.method==='GET')return json(res,200,{user});
+ if(path==='/auth/me'&&req.method==='GET'){
+  try{
+   const profile=await loadProfile(pool,user.id);
+   if(!profile){revokeSession(token);return json(res,401,{error:'Unauthorized'});}
+   return json(res,200,{user:profile});
+  }catch(e){console.error('Profile lookup failed',e.code||e.message);return json(res,503,{error:'Profile unavailable'});}
+ }
  if(path==='/auth/logout'&&req.method==='POST'){revokeSession(token);return json(res,200,{ok:true});}
  if(path==='/auth/change-password'&&req.method==='POST'){
   try{
    if(!writePool)return json(res,503,{error:'Password changes unavailable'});
    const input=await body(req,4096),current=String(input?.current_password||''),next=String(input?.new_password||'');
    if(!current||!accountPassword(next))return json(res,400,{error:'New password must be 12-256 characters and include letters and numbers'});
-   const found=await pool.query('SELECT password_hash FROM app.users WHERE id=$1 AND active=true',[user.id]);
+   const found=await pool.query('SELECT password_hash FROM app.users WHERE id=$1 AND active=true AND deleted_at IS NULL',[user.id]);
    if(!found.rowCount||!verifyPassword(current,found.rows[0].password_hash))return json(res,401,{error:'Current password is incorrect'});
-   await writePool.query('UPDATE app.users SET password_hash=$1 WHERE id=$2 AND active=true',[hashPassword(next),user.id]);
+   await writePool.query('UPDATE app.users SET password_hash=$1,password_changed_at=now(),must_change_password=false,updated_at=now() WHERE id=$2 AND active=true AND deleted_at IS NULL',[hashPassword(next),user.id]);
    await writePool.query('INSERT INTO app.audit_events(actor_id,entity_type,entity_id,action,after_state) VALUES($1,$2,$3,$4,$5)',[user.id,'auth_user',user.id,'password_changed',{username:user.username}]);
    return json(res,200,{ok:true});
-  }catch(e){console.error('Password change failed',e.code||e.message);return json(res,503,{error:'Password change unavailable'});}
+  }catch(e){console.error('Password change failed',e.code||e.message);return json(res,e.status||503,{error:e.status?e.message:'Password change unavailable'});}
  }
  if(path==='/api/dashboard'&&req.method==='GET')return dashboard(res);
  if(path==='/api/analytics'&&req.method==='GET'){
@@ -157,10 +125,11 @@ const server=http.createServer(async(req,res)=>{
  }
  if(path==='/api/erp/state')return erpState(req,res,user);
  if(path==='/api/dashboard-layout')return dashboardLayout(req,res,user);
- if(await adminUsers(req,res,user,path))return;
+ if(await handleAdminUsers({req,res,path,method:req.method,url,user,readBody:()=>body(req),pool,writePool,json}))return;
  if(await handleWorkItems({path,method:req.method,url,user,readBody:()=>body(req),pool,writePool,json,res}))return;
  if(await handleTraining({path,method:req.method,user,readBody:()=>body(req),pool,writePool,json,res}))return;
  if(await handleCommunication({path,method:req.method,url,user,readBody:()=>body(req,20000),pool,writePool,json,res}))return;
  return json(res,404,{error:'Not found'});
 });
-server.listen(3107,'127.0.0.1',()=>console.log('SK ERP API listening on localhost:3107'));
+const apiPort=Number(env.SK_API_PORT||3107),apiHost=env.SK_API_HOST||'127.0.0.1';
+server.listen(apiPort,apiHost,()=>console.log(`SK ERP API listening on ${apiHost}:${apiPort}`));

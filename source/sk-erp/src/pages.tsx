@@ -4,7 +4,9 @@ const Home = lazy(() => import('./features/home'));
 import { MyWork } from './features/work';
 import { OrderBoard } from './features/board';
 import { QuickBooking } from './features/book';
-import { HelpCenter } from './features/guide';
+import { Academy } from './features/academy';
+import { TrainingDashboard, TrainingCoverage } from './features/training-admin';
+import { UserManagement } from './features/user-admin';
 import { Journeys } from './features/journeys';
 import { CashPlan } from './features/cashplan';
 import { TimeLimits } from './features/timelimits';
@@ -32,7 +34,7 @@ export const PAGES: Record<string, React.ComponentType> = {
   work: MyWork,
   board: OrderBoard,
   book: QuickBooking,
-  help: HelpCenter,
+  help: Academy,
   'ops/orders': Orders, 'ops/order-confirmation': OrderConfirmation, 'ops/vp-schedule': VPSchedule, 'ops/vp-planning': VPPlanning, 'ops/vp-loading': VPLoading, 'ops/smart-load': SmartLoadPlanning,
   'ops/lr-new': GenerateLR, 'ops/lr': LRRegister, 'ops/dc': DeliveryChallans, 'ops/ldc': LDCAck, 'ops/grn': GRNPage, 'ops/dgrn': DGRNPage, 'ops/delivery': Delivery, 'ops/pod': POD, 'ops/courier': Courier,
   'fleet/trucks': Trucks, 'fleet/journeys': Journeys, 'fleet/trips': Trips, 'fleet/logslips': LogSlips, 'fleet/drivers': Drivers, 'fleet/fuel': FuelExpenses, 'fleet/expenses': MonthlyExpenses, 'fleet/trip-completion': TripCompletion, 'fleet/accidents': Accidents,
@@ -47,8 +49,8 @@ export const PAGES: Record<string, React.ComponentType> = {
   'hr/employees': Employees, 'hr/leaves': Leaves, 'hr/shifts': ShiftRoster, 'hr/attendance': Attendance, 'hr/holidays': Holidays, 'hr/designations': Designations, 'hr/departments': Departments, 'hr/appreciation': Appreciation,
   'payroll/run': Payroll, 'payroll/salary': EmployeeSalary, 'payroll/tds': TDS, 'payroll/expenses': PayrollExpenses, 'payroll/overtime': OvertimeRequests, 'payroll/reports': PayrollReports,
   reports: ReportsHub, prints: PrintGallery, masters: MastersHub,
-  'access/users': Users, 'access/roles': Roles, 'access/password': ChangePassword,
-  'access/credentials': CredentialAdministration,
+  'access/users': UserManagement, 'access/roles': Roles, 'access/password': ChangePassword,
+  'access/credentials': UserManagement,
   communication: Communication, 'communication/tasks': CommunicationTasks, 'communication/enquiries': CommunicationEnquiries, 'communication/audit': CommunicationAudit,
-  'admin/corrections': Corrections, 'admin/announcements': Announcements, 'admin/import': ExcelImport, 'admin/barcode': LRBarcodes, 'admin/settings': Settings, 'admin/time-limits': TimeLimits, 'admin/legacy-map': LegacyMap,
+  'admin/corrections': Corrections, 'admin/announcements': Announcements, 'admin/import': ExcelImport, 'admin/barcode': LRBarcodes, 'admin/settings': Settings, 'admin/time-limits': TimeLimits, 'admin/training': TrainingDashboard, 'admin/training-coverage': TrainingCoverage, 'admin/legacy-map': LegacyMap,
 };

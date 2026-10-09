@@ -1,5 +1,5 @@
 // Authentication is enforced by the server; never put internal API tokens in browser code.
-export type ERPUser={id:string;username:string;role:string};
+export type ERPUser={id:string;username:string;role:string;full_name?:string;branch_code?:string;department?:string;designation?:string;extra_permissions?:string[];denied_permissions?:string[];must_change_password?:boolean};
 export type ERPCounts={lrs:string;customers:string;branches:string;bills:string;ledger_entries:string};
 export type ERPDashboard={source:string;historicalAsOf:string;counts:ERPCounts;recentLrs:unknown[];recentBills:unknown[]};
 let accessToken:string|null=null;
@@ -59,9 +59,13 @@ export const setTrainingProgress=(lesson_id:string,completed:boolean)=>apiJSON<{
 export type ERPState={data:any;version:number;updated_at:string;source:string};
 export const fetchERPState=()=>apiJSON<ERPState>('/api/erp/state');
 export const saveERPState=(data:any,version:number)=>apiJSON<ERPState>('/api/erp/state',{method:'PUT',body:JSON.stringify({data,version})});
-export type AdminAuthUser={id:string;username:string;role:string;active:boolean;created_at:string};
-export const fetchAdminUsers=()=>apiJSON<{users:AdminAuthUser[]}>('/api/admin/users');
-export const updateAdminUser=(id:string,data:{role?:string;active?:boolean})=>apiJSON<{user:AdminAuthUser}>(`/api/admin/users/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify(data)});
+export type AdminTrainingSummary={lessons_completed:number;records:number;last_activity_at:string|null;quizzes_passed:number;best_quiz_avg:number|null};
+export type AdminAuthUser={id:string;username:string;role:string;active:boolean;created_at:string;full_name?:string;email?:string;phone?:string;branch_code?:string;department?:string;designation?:string;extra_permissions?:string[];denied_permissions?:string[];last_login_at?:string|null;must_change_password?:boolean;deleted_at?:string|null;updated_at?:string;training?:AdminTrainingSummary};
+export type AdminUserInput={username?:string;full_name?:string;role?:string;active?:boolean;branch_code?:string;email?:string;phone?:string;department?:string;designation?:string;extra_permissions?:string[];denied_permissions?:string[];password?:string};
+export const fetchAdminUsers=(includeDeleted=false)=>apiJSON<{users:AdminAuthUser[]}>('/api/admin/users'+(includeDeleted?'?include_deleted=1':''));
+export const createAdminUser=(data:AdminUserInput)=>apiJSON<{user:AdminAuthUser;temporaryPassword:string}>('/api/admin/users',{method:'POST',body:JSON.stringify(data)});
+export const updateAdminUser=(id:string,data:AdminUserInput)=>apiJSON<{user:AdminAuthUser}>(`/api/admin/users/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify(data)});
+export const deleteAdminUser=(id:string)=>apiJSON<{ok:boolean}>(`/api/admin/users/${encodeURIComponent(id)}`,{method:'DELETE'});
 export const resetAdminUserPassword=(id:string,password?:string)=>apiJSON<{user:AdminAuthUser;temporaryPassword:string}>(`/api/admin/users/${encodeURIComponent(id)}/reset-password`,{method:'POST',body:JSON.stringify(password?{password}: {})});
 export type DashboardLayoutItem={id:string;span:1|2|3|4};
 export const fetchDashboardLayout=()=>apiJSON<{layout:DashboardLayoutItem[]|null;updated_at:string|null}>('/api/dashboard-layout');
@@ -78,3 +82,26 @@ export const markCommunicationRead=(id:string)=>apiJSON<{ok:boolean}>(`/api/comm
 export const createCommunicationTask=(data:Record<string,unknown>)=>apiJSON<CommunicationTask>('/api/communication/tasks',{method:'POST',body:JSON.stringify(data)});
 export const updateCommunicationTask=(id:string,data:Record<string,unknown>)=>apiJSON<CommunicationTask>(`/api/communication/tasks/${id}`,{method:'PATCH',body:JSON.stringify(data)});
 export const fetchCommunicationAudit=()=>apiJSON<{events:any[]}>('/api/communication/audit');
+
+// ---------------- Training Academy (server-side progress) ----------------
+export type TrainingRecordDTO={kind:string;item_id:string;status:string;score:number|null;detail?:any;started_at?:string;completed_at?:string|null;updated_at?:string};
+export type QuizSummaryDTO={quiz_id:string;attempts:number;best:number;last:number;passed:boolean;last_at:string;wrong:string[]};
+export type ApiError=Error&{status?:number};
+async function apiJSONStatus<T>(path:string,init:RequestInit={}):Promise<T>{
+ if(!accessToken)throw Object.assign(new Error('Sign in required'),{status:401});
+ const res=await fetch(path,{...init,headers:{'Content-Type':'application/json',Authorization:'Bearer '+accessToken,...(init.headers||{})},cache:'no-store'});
+ if(!res.ok){const data=await res.json().catch(()=>({}));throw Object.assign(new Error(res.status===401?'Session expired':data.error||'ERP API request failed'),{status:res.status});}
+ return res.json();
+}
+const numify=(x:any)=>x===null||x===undefined?x:Number(x);
+const normRecord=(r:any):TrainingRecordDTO=>({...r,score:numify(r.score)});
+const normQuiz=(q:any):QuizSummaryDTO=>({...q,attempts:Number(q.attempts||0),best:Number(q.best||0),last:Number(q.last||0),passed:!!q.passed,wrong:q.wrong||[]});
+export async function fetchTrainingMe(){const d=await apiJSONStatus<any>('/api/training/me');return {user_id:String(d.user_id),records:(d.records||[]).map(normRecord),quizzes:(d.quizzes||[]).map(normQuiz),settings:d.settings||{}};}
+export const saveTrainingRecord=(r:{kind:string;item_id:string;status:string;score?:number|null;detail?:any})=>apiJSONStatus<{record:any}>('/api/training/records',{method:'POST',body:JSON.stringify(r)}).then(d=>normRecord(d.record));
+export const resetTrainingKind=(kind:'onboarding'|'tour'|'hint')=>apiJSONStatus<{deleted:number}>('/api/training/reset',{method:'POST',body:JSON.stringify({kind})});
+export const saveQuizAttempt=(a:{quiz_id:string;score:number;correct:number;total:number;passed:boolean;wrong:string[];duration_seconds?:number})=>apiJSONStatus<{attempt:any;summary:any}>('/api/training/quiz-attempts',{method:'POST',body:JSON.stringify(a)}).then(d=>({attempt:d.attempt,summary:normQuiz(d.summary)}));
+export type TeamMember={id:string;username:string;full_name:string;role:string;branch_code:string;department:string;designation:string;active:boolean;last_login_at:string|null;last_activity_at:string|null;records:TrainingRecordDTO[];quizzes:QuizSummaryDTO[]};
+export async function fetchTrainingTeam(){const d=await apiJSONStatus<any>('/api/training/team');return (d.users||[]).map((u:any)=>({...u,id:String(u.id),records:(u.records||[]).map(normRecord),quizzes:(u.quizzes||[]).map(normQuiz)})) as TeamMember[];}
+export async function fetchTrainingUser(id:string){const d=await apiJSONStatus<any>(`/api/training/users/${encodeURIComponent(id)}`);return {user:d.user,records:(d.records||[]).map(normRecord),attempts:(d.attempts||[]).map((a:any)=>({...a,score:Number(a.score)}))};}
+export const fetchTrainingSettings=()=>apiJSONStatus<{readiness:any}>('/api/training/settings');
+export const saveTrainingSettings=(readiness:any)=>apiJSONStatus<{readiness:any;updated_at:string}>('/api/training/settings',{method:'PUT',body:JSON.stringify({readiness})});

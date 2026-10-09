@@ -4,16 +4,19 @@ import {LOGO} from '../assets';
 import FullLiveDashboard from './full-live-dashboard';
 import {PrototypeERP} from '../App.prototype';
 import {useUI,setAuthenticatedPrincipal} from '../store/store';
+import {useTraining} from '../training/store';
+// After sign-in: load the employee's server-side training record; a temporary password must be changed first.
+const afterSignIn=(u:ERPUser)=>{void useTraining.getState().load(u.username);return u.must_change_password?'access/password':'dashboard';};
 export default function SecurePortal(){
  const [username,setUsername]=useState('');const [password,setPassword]=useState('');
  const [user,setUser]=useState<ERPUser|null>(null);
  const [dashboard,setDashboard]=useState<ERPDashboard|null>(null);
  const setUI=useUI(s=>s.set);
  const [busy,setBusy]=useState(false);const [error,setError]=useState('');
- useEffect(()=>{const onLogout=()=>{setUser(null);setDashboard(null);setUI({signedIn:false});};window.addEventListener('skt-erp-logout',onLogout);return()=>window.removeEventListener('skt-erp-logout',onLogout)},[setUI]);
- useEffect(()=>{let live=true;restoreERP().then(async u=>{if(!u)return;setAuthenticatedPrincipal({username:u.username,role:u.role});const data=await fetchERPDashboard();if(live){setUI({signedIn:true,route:'dashboard',simple:false});setUser(u);setDashboard(data);}}).catch(()=>{if(live){setAuthenticatedPrincipal(null);logoutERP();}});return()=>{live=false}},[setUI]);
+ useEffect(()=>{const onLogout=()=>{setUser(null);setDashboard(null);setUI({signedIn:false});useTraining.getState().clear();};window.addEventListener('skt-erp-logout',onLogout);return()=>window.removeEventListener('skt-erp-logout',onLogout)},[setUI]);
+ useEffect(()=>{let live=true;restoreERP().then(async u=>{if(!u)return;setAuthenticatedPrincipal(u);const start=afterSignIn(u);const data=await fetchERPDashboard();if(live){setUI({signedIn:true,...(u.must_change_password?{route:start}:{}),simple:false});setUser(u);setDashboard(data);}}).catch(()=>{if(live){setAuthenticatedPrincipal(null);logoutERP();}});return()=>{live=false}},[setUI]);
  async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');
-  try{const u=await loginERP(username,password);setAuthenticatedPrincipal({username:u.username,role:u.role});const data=await fetchERPDashboard();setUI({signedIn:true,route:'dashboard',simple:false});setUser(u);setDashboard(data);setPassword('');}
+  try{const u=await loginERP(username,password);setAuthenticatedPrincipal(u);const start=afterSignIn(u);const data=await fetchERPDashboard();setUI({signedIn:true,route:start,simple:false});setUser(u);setDashboard(data);setPassword('');}
   catch(e){await logoutERP();setError(e instanceof Error?e.message:'Authentication failed');}finally{setBusy(false);}
  }
  if(user)return <PrototypeERP/>;

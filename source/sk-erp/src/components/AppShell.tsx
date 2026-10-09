@@ -9,19 +9,23 @@ import { Avatar } from './ui';
 import { useT } from '../lib/useT';
 import { LangButton } from './LangSwitch';
 import { logoutERP } from '../lib/api';
-import { setAuthenticatedPrincipal } from '../store/store';
+import { setAuthenticatedPrincipal, usePrincipal } from '../store/store';
 import { FloatingChat } from '../features/floating-chat';
 
 export function useRole() {
   const db = useDB();
   const userId = useUI((s) => s.userId);
-  const user = db.users.find((u: any) => u.id === userId) || db.users[0];
+  const principal = usePrincipal((s) => s.principal);
+  const legacyUser = db.users.find((u: any) => u.id === userId) || db.users[0];
+  // The signed-in server account is the identity: its name, and its per-user permission overrides from
+  // Users & Access, replace the legacy ERP user record that the shared dataset maps to.
+  const user = principal ? { ...legacyUser, ...(principal.full_name ? { firstName: principal.full_name.split(' ')[0], lastName: principal.full_name.split(' ').slice(1).join(' ') } : {}), username: principal.username, authId: principal.id, extraMenus: principal.extra_permissions || [], deniedMenus: principal.denied_permissions || [] } : legacyUser;
   const authenticatedCode = getAuthenticatedRoleCode();
   const role = db.roles.find((r: any) => r.code === authenticatedCode) || db.roles.find((r: any) => r.id === user.roleId) || db.roles[0];
   // Super Admin is server-authenticated. Preserve its complete navigation even
   // when an older shared ERP-state snapshot has incomplete role menu metadata.
   const roleMenus = role.code === 'SA' ? NAV.flatMap((g) => g.items.map((i) => i.key)) : (role.menus || []);
-  const customMenus = ['SA', 'AD'].includes(role.code) ? (user.extraMenus || []) : [];
+  const customMenus = principal ? (user.extraMenus || []) : ['SA', 'AD'].includes(role.code) ? (user.extraMenus || []) : [];
   const allowed = new Set<string>([...roleMenus, ...customMenus].filter((m) => !(user.deniedMenus || []).includes(m)));
   return { user, role, allowed, can: (k: string) => allowed.has(k) || k === 'dashboard' || (!!ROUTE_ALIAS[k] && allowed.has(ROUTE_ALIAS[k])) };
 }
