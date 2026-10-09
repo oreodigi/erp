@@ -86,9 +86,11 @@ export async function handleFeedback({path,method,url,user,readBody,pool,writePo
    if(!r.rowCount)throw fail(404,'Feedback not found');json(res,200,{item:r.rows[0]});return true;
   }
   if(m&&method==='PATCH'){
-   if(!admin)throw fail(403,'Admin permission required');if(!writePool)throw fail(503,'Feedback write service unavailable');
+   if(!writePool)throw fail(503,'Feedback write service unavailable');
    const d=await readBody();if(!obj(d))throw fail(400,'Invalid feedback update');
    const prior=await pool.query('SELECT * FROM app.feedback WHERE id=$1',[m[1]]);if(!prior.rowCount)throw fail(404,'Feedback not found');
+   const owner=String(prior.rows[0].user_id)===String(user.id);
+   if(!admin){const keys=Object.keys(d);const verifyOnly=owner&&prior.rows[0].status==='Fixed'&&keys.length===1&&keys[0]==='status'&&['Verified','Need More Information'].includes(d.status);if(!verifyOnly)throw fail(403,'Admin permission required');}
    const status=d.status===undefined?prior.rows[0].status:d.status;if(!STATUSES.has(status))throw fail(400,'Invalid status');
    const impact=d.impact===undefined?prior.rows[0].impact:d.impact;if(!IMPACT.has(impact))throw fail(400,'Invalid impact');
    const assigned=d.assigned_to===undefined?prior.rows[0].assigned_to:(d.assigned_to||null);

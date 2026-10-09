@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-09 — Feedback Stage 4 acceptance hardening
+
+- Added end-to-end API acceptance coverage from employee feedback capture through admin review/fix to employee verification.
+- Fixed a permission mismatch that prevented the original submitter from marking a Fixed item Verified or returning it for more work.
+- API suite now passes 39/39 tests; build, Training Academy and Smart Load regression suites remain green.
+- Authenticated live-browser visual QA remains pending because the available production login credential was rejected; no visual pass is claimed.
+
+
 ## 2026-10-09 — Feedback Stage 3/4 integration
 
 - My Feedback now shows team discussion and resolution notes and lets submitters reply with clarification.

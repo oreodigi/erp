@@ -387,6 +387,14 @@ async function run(){
   const own=await api('GET',`/api/feedback/${fid}`,{token:erin});expectStatus(own,200);assert.equal(own.json.item.comments.length,1);assert.equal(own.json.item.comments[0].body,'User clarification');assert.equal(own.json.item.comments[0].internal,false);
   const adm=await api('GET',`/api/feedback/${fid}`,{token:alice});expectStatus(adm,200);assert.equal(adm.json.item.comments.length,2);assert.ok(adm.json.item.comments.some(x=>x.internal&&x.body==='Private triage note'));
  });
+ await step('feedback end-to-end UAT lifecycle reaches submitter verification',async()=>{
+  const c=await api('POST','/api/feedback',{token:erin,body:{feedback_type:'Improvement',impact:'High',description:'End-to-end UAT item',screen_id:'smart-load-planning',route:'smart-load-planning',section:'Physical Loading Confirmation',record_no:'SLP-QA-001',mode:'Practice',points:['Clarify loading instruction']}});expectStatus(c,201);const fid=c.json.item.id;
+  let r=await api('PATCH',`/api/feedback/${fid}`,{token:alice,body:{status:'Reviewing',impact:'High'}});expectStatus(r,200);
+  expectStatus(await api('POST',`/api/feedback/${fid}/comments`,{token:alice,body:{body:'Accepted for QA lifecycle',internal:false}}),201);
+  r=await api('PATCH',`/api/feedback/${fid}`,{token:alice,body:{status:'Fixed',resolution:'Updated the review flow for acceptance testing.'}});expectStatus(r,200);assert.equal(r.json.item.status,'Fixed');
+  const mine=await api('GET',`/api/feedback/${fid}`,{token:erin});expectStatus(mine,200);assert.equal(mine.json.item.section,'Physical Loading Confirmation');assert.equal(mine.json.item.resolution,'Updated the review flow for acceptance testing.');assert.ok(mine.json.item.comments.some(x=>x.body==='Accepted for QA lifecycle'));
+  r=await api('PATCH',`/api/feedback/${fid}`,{token:erin,body:{status:'Verified'}});expectStatus(r,200);assert.equal(r.json.item.status,'Verified');
+ });
  await step('feedback duplicate requires original reference',async()=>{
   const a=await api('POST','/api/feedback',{token:erin,body:{feedback_type:'Bug',impact:'Medium',description:'Original',screen_id:'dashboard',route:'dashboard',mode:'Company'}});
   const b=await api('POST','/api/feedback',{token:erin,body:{feedback_type:'Bug',impact:'Medium',description:'Duplicate',screen_id:'dashboard',route:'dashboard',mode:'Company'}});

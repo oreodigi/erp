@@ -32,7 +32,7 @@ Lifecycle: New → Reviewing → Accepted → Planned → In Development → Rea
 Screen/route/record context, Company/Practice mode, Help & Training coverage, user-visible discussion, resolution visibility, submitter fix verification and optional page-section context are integrated. The feedback drawer discovers labelled/tour sections on the current ERP screen and stores the selected section with the submission, while screen IDs continue to map to the Training registry.
 
 ## Stage 4 — Analytics & QA — IN PROGRESS
-Completed: admin-only module/screen/role/type aggregation API, module hotspot panel, most-confusing-screen panel, filtered CSV export, attachment security tests, analytics authorization tests and API integration coverage. Remaining before marking complete: dedicated authenticated mobile/desktop visual QA and final end-to-end acceptance pass.
+Completed: admin-only module/screen/role/type aggregation API, module hotspot panel, most-confusing-screen panel, filtered CSV export, attachment security tests, analytics authorization tests and a full API end-to-end acceptance lifecycle from employee submission through admin review/fix to submitter verification. The acceptance pass exposed and fixed the owner-verification API permission mismatch. Remaining before marking complete: dedicated authenticated mobile/desktop visual QA. The 2026-10-09 live-browser attempt reached tejum.in but the available pranav credential was rejected, so visual QA was not falsely marked as passed.
 
 ## Security/demo rules
 - Never store uploads in PostgreSQL blobs.
