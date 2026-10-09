@@ -10,6 +10,7 @@ import { LangChooser } from '../components/LangSwitch';
 import { ListenButton } from '../components/VoicePlayer';
 import { WELCOME, TOUR_AUDIO, PAGE_AUDIO, HOWTO_AUDIO, LESSONS } from '../lib/audio-scripts';
 import { play, stop, useVoice, hindiVoice, setRate } from '../lib/voice';
+import { useTraining } from '../training/store';
 import { Lightbulb, X, ChevronRight, ChevronLeft, PlayCircle, BookOpen, GraduationCap, CheckCircle2, Circle, FlaskConical, Database, Search, PackagePlus, Inbox, Receipt, IndianRupee, TrainFront, Route, Wrench, AlertTriangle, Headphones, Volume2 } from 'lucide-react';
 
 // ---------------- Page explainers ----------------
@@ -98,23 +99,23 @@ const TOUR = [
 export function OnboardingHost() {
   const { user, role } = useRole();
   const guide = useUI((s) => s.guide);
-  const done = useUI((s) => s.toursDone);
   const tour = useUI((s) => s.tour);
   const route = useUI((s) => s.route);
   const set = useUI((s) => s.set);
   const nav = useUI((s) => s.nav);
   const t = useT();
-  const key = 'welcome:' + user.id;
-  // remember visited screens for the first-week checklist
-  useEffect(() => { if (!done['visit:' + route]) set({ toursDone: { ...useUI.getState().toursDone, ['visit:' + route]: true } }); }, [route]);
+  const records = useTraining((s) => s.records);
+  const welcomeDone = ['completed','skipped'].includes(String(records['onboarding:welcome']?.status || ''));
+  // Visits/search are training records, so first-week progress follows the employee across devices.
+  useEffect(() => { if (route) void useTraining.getState().record('screen', route, 'completed'); }, [route]);
   const palette = useUI((s) => s.palette);
-  useEffect(() => { if (palette && !done['chk:search']) set({ toursDone: { ...useUI.getState().toursDone, 'chk:search': true } }); }, [palette]);
+  useEffect(() => { if (palette) void useTraining.getState().record('onboarding', 'search', 'completed'); }, [palette]);
   const voice = useUI((s) => s.voice);
   const welcomeClip = WELCOME[role.code] || WELCOME.BU;
-  const showWelcome = guide && !done[key] && tour !== 'run';
+  const showWelcome = guide && !welcomeDone && tour !== 'run';
   useEffect(() => { if (showWelcome && voice) { const tm = setTimeout(() => { setRate(useUI.getState().voiceRate || 0.95); play(welcomeClip); }, 700); return () => clearTimeout(tm); } }, [showWelcome, voice]);
-  if (tour === 'run') return <Tour onEnd={() => set({ tour: null, toursDone: { ...useUI.getState().toursDone, [key]: true, 'chk:tour': true } })} />;
-  if (!guide || done[key]) return null;
+  if (tour === 'run') return <Tour onEnd={() => { set({ tour: null }); void useTraining.getState().record('tour', 'app-tour', 'completed'); void useTraining.getState().record('onboarding', 'welcome', 'completed'); }} />;
+  if (!guide || welcomeDone) return null;
   const intro = ROLE_INTRO[role.code] || ROLE_INTRO.BU;
   return (
     <div className="fixed inset-0 z-[70] grid place-items-center p-4" role="dialog" aria-modal="true" aria-label={t('Welcome')}>
@@ -129,7 +130,7 @@ export function OnboardingHost() {
         <div className="mt-3"><ListenButton clip={welcomeClip} label={t('Listen in Hinglish')} /></div>
         <div className="grid grid-cols-[minmax(0,1fr)] gap-2 mt-5">
           <button className="btn-primary h-12 text-[15px]" onClick={() => { nav('dashboard'); set({ tour: 'run' }); }}><PlayCircle size={18} /> {t('Show me around (1 minute)')}</button>
-          <button className="btn-ghost h-11" onClick={() => { stop(); set({ toursDone: { ...done, [key]: true } }); }}>{t('Skip – I’ll explore myself')}</button>
+          <button className="btn-ghost h-11" onClick={() => { stop(); void useTraining.getState().record('onboarding', 'welcome', 'skipped'); }}>{t('Skip – I’ll explore myself')}</button>
         </div>
         <p className="text-[12px] text-faint mt-3 text-center">{t('You can restart this from Help & Training any time.')}</p>
       </div>

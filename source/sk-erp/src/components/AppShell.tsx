@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { NAV, ROLE_GROUPS, findItem, SIMPLE_NAV, OPEN_ROUTES, ROUTE_ALIAS, ALL_ITEMS } from '../nav';
 import { workCount } from '../features/work';
-import { useUI, useDB, A, lookup, getAuthenticatedRoleCode } from '../store/store';
+import { useUI, useDB, useStore, A, lookup, getAuthenticatedRoleCode } from '../store/store';
 import { cls, ago } from '../lib/util';
 import { EMBLEM } from '../assets';
 import { Search, Bell, Sun, Moon, Monitor, ChevronDown, ChevronsLeft, ChevronsRight, Menu, Home, FileText, LayoutGrid, X, LogOut, Plus, Check, Building2, Lightbulb, HelpCircle, ListChecks, Columns3, Sparkles } from 'lucide-react';
@@ -394,11 +394,15 @@ function BottomNav() {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const source = useStore((s) => s.source);
+  const practice = source !== 'legacy';
+  const t = useT();
   return (
     <div className="h-full flex overflow-hidden">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar />
+        {practice && <div className="bg-warn/15 border-b border-warn/35 px-3 sm:px-5 py-2 flex items-center gap-2 text-[12.5px] font-semibold text-warn" role="status"><Sparkles size={15}/><span className="flex-1">{t('Practice mode — company records are protected. Changes here stay in the training sandbox.')}</span><button className="underline" onClick={() => useUI.getState().nav('help',{tab:'practice'})}>{t('Training')}</button></div>}
         <main id="main-scroll" className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
           <div className="max-w-[1480px] mx-auto px-4 sm:px-6 py-5 pb-28 lg:pb-10">{children}</div>
         </main>

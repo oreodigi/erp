@@ -10,9 +10,9 @@ import { EmptyState } from './components/ui';
 import { ShieldAlert } from 'lucide-react';
 import { SignIn } from './features/signin';
 import { QuickActionHost } from './components/QuickActions';
-import { OnboardingHost, PageGuide } from './features/guide';
+import { OnboardingHost } from './features/guide';
 import { PracticeHost } from './training/ui/PracticeHost';
-import { ScreenHelpHost } from './training/ui/ScreenHelp';
+import { ScreenHelpHost, ScreenHint } from './training/ui/ScreenHelp';
 import { OPEN_ROUTES } from './nav';
 import { setCurrentLang } from './lib/i18n';
 import { useT } from './lib/useT';
@@ -71,7 +71,7 @@ export function PrototypeERP() {
     <>
       <AppShell>
         <Boundary k={route}>
-          {allowed ? <div key={route} className="animate-in"><PageGuide routeKey={key} /><Suspense fallback={<Loading text="Loading module…" />}><Page /></Suspense></div> : <EmptyState icon={ShieldAlert} title={t("You don't have access to this module")} body={t('Your role does not include this menu. Ask an administrator to grant access from Users & Access → Roles & Permissions.')} />}
+          {allowed ? <div key={route} className="animate-in"><ScreenHint routeKey={key} /><Suspense fallback={<Loading text="Loading module…" />}><Page /></Suspense></div> : <EmptyState icon={ShieldAlert} title={t("You don't have access to this module")} body={t('Your role does not include this menu. Ask an administrator to grant access from Users & Access → Roles & Permissions.')} />}
         </Boundary>
       </AppShell>
       <RecordDrawer />

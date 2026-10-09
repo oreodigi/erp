@@ -13,7 +13,7 @@ import {hashPassword} from '../auth.mjs';
 
 const here=path.dirname(fileURLToPath(import.meta.url));
 const apiDir=path.resolve(here,'..'),repo=path.resolve(apiDir,'..');
-const PGBIN=process.env.PG_BIN||'/usr/lib/postgresql/16/bin';
+const PGBIN=process.env.PG_BIN||(()=>{try{return execFileSync('pg_config',['--bindir'],{encoding:'utf8'}).trim();}catch{return '/usr/bin';}})();
 const ROOT_USER='root.admin',ROOT_PASS='TestOnly-Root-Passw0rd';
 const isRoot=process.getuid?.()===0;
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'sk-erp-test-'));

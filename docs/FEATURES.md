@@ -43,6 +43,16 @@
 - Operational sidebar menu search was added.
 - Floating chat control layout was corrected for the client-facing shell.
 
+## Role-Based ERP Training Academy & User Management
+
+- PostgreSQL-backed employee/user administration with create, edit, role and per-user permission overrides, activate/deactivate, soft delete, password reset, forced first-login password change and administrative safeguards.
+- Role-aware Training Academy with persistent employee progress, onboarding, 175 lessons, Hinglish audio support, 14 end-to-end workflows, 39 isolated practice exercises, 210 ERP-behavior questions, module/final assessments and a 66-term glossary.
+- 123/123 meaningful ERP routes have contextual training metadata and Screen Help.
+- Screen Help includes purpose, why/when, before/after, guided walkthrough, field/status help, common mistakes, related screens, lesson/audio and Practice links.
+- Practice Mode cannot upload sample state to shared PostgreSQL, can be reset independently and displays a global safety banner.
+- Readiness combines lessons, tours, practical exercises, workflows and assessments. Admin Training Dashboard shows employee readiness and detailed progress.
+- Training coverage is enforced by `npm run test:training` so new routes cannot silently ship without training metadata.
+
 ## Partially functional / migration boundary
 
 - Many original screens use the preserved ERP state document and shared PostgreSQL JSONB persistence rather than individual normalized operational tables.
