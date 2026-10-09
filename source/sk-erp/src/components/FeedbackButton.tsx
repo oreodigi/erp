@@ -12,18 +12,18 @@ const size=n=>n<1048576?Math.ceil(n/1024)+' KB':(n/1048576).toFixed(1)+' MB';
 
 export function FeedbackButton(){
  const route=useUI(s=>s.route),params=useUI(s=>s.params),source=useStore(s=>s.source),sc=SCREEN_BY_ID.get(route);
- const [open,setOpen]=useState(false),[tab,setTab]=useState<'give'|'mine'|'review'>('give'),[type,setType]=useState('Improvement'),[impact,setImpact]=useState('Medium'),[text,setText]=useState(''),[points,setPoints]=useState<string[]>(['']),[files,setFiles]=useState<File[]>([]),[busy,setBusy]=useState(false),[msg,setMsg]=useState('');
+ const [open,setOpen]=useState(false),[tab,setTab]=useState<'give'|'mine'|'review'>('give'),[type,setType]=useState('Improvement'),[impact,setImpact]=useState('Medium'),[text,setText]=useState(''),[points,setPoints]=useState<string[]>(['']),[files,setFiles]=useState<File[]>([]),[busy,setBusy]=useState(false),[msg,setMsg]=useState(''),[section,setSection]=useState(''),[sections,setSections]=useState<string[]>([]);
  const [recording,setRecording]=useState(false),[audio,setAudio]=useState<Blob|null>(null),[items,setItems]=useState<FeedbackItem[]>([]),[admin,setAdmin]=useState(false),[loading,setLoading]=useState(false),[reply,setReply]=useState<Record<string,string>>({});
  const rec=useRef<MediaRecorder|null>(null),chunks=useRef<Blob[]>([]);
  const load=async()=>{setLoading(true);try{const d=await listFeedback();setItems(d.items);setAdmin(d.admin)}catch(e:any){setMsg(e.message)}finally{setLoading(false)}};
- useEffect(()=>{if(open)void load()},[open,tab]);
- const reset=()=>{setText('');setPoints(['']);setFiles([]);setAudio(null);setMsg('');setType('Improvement');setImpact('Medium')};
+ useEffect(()=>{if(open){void load();const found=Array.from(document.querySelectorAll('main section[aria-label],main [data-tour]')).map((e:any)=>String(e.getAttribute('aria-label')||e.getAttribute('data-tour')||'').trim()).filter(Boolean);setSections(Array.from(new Set(found)).slice(0,30));}},[open,tab,route]);
+ const reset=()=>{setText('');setPoints(['']);setFiles([]);setAudio(null);setMsg('');setType('Improvement');setImpact('Medium');setSection('')};
  const submit=async()=>{
   setBusy(true);setMsg('');
   try{
    const recordNo=String((params as any)?.lrNo||(params as any)?.billNo||(params as any)?.orderNo||(params as any)?.planNo||'');
    const fallback=audio||files.length?'Attachment/voice feedback':'';
-   const d=await createFeedback({feedback_type:type,impact,description:text.trim()||fallback,points:points.filter(x=>x.trim()),module:sc?.module||route.split('/')[0]||'',screen_id:route,route,route_params:params||{},record_no:recordNo||undefined,mode:source==='legacy'?'Company':'Practice',client_context:{viewport:[innerWidth,innerHeight],platform:navigator.platform,userAgent:navigator.userAgent.slice(0,300)}});
+   const d=await createFeedback({feedback_type:type,impact,description:text.trim()||fallback,points:points.filter(x=>x.trim()),module:sc?.module||route.split('/')[0]||'',screen_id:route,route,route_params:params||{},record_no:recordNo||undefined,section:section||undefined,mode:source==='legacy'?'Company':'Practice',client_context:{viewport:[innerWidth,innerHeight],platform:navigator.platform,userAgent:navigator.userAgent.slice(0,300)}});
    for(const f of files)await uploadFeedbackAttachment(d.item.id,f,f.name);
    if(audio)await uploadFeedbackAttachment(d.item.id,audio,'voice-'+Date.now()+'.webm');
    setMsg('Feedback '+(d.item.feedback_no||'')+' submitted successfully.');reset();await load();setTab('mine');
@@ -45,6 +45,7 @@ export function FeedbackButton(){
   <div className="p-4 sm:p-5 overflow-y-auto flex-1">
   {tab==='give'?<div className="space-y-4">
    <div className="grid grid-cols-2 gap-3"><label className="text-[12px] font-semibold">Type<select className="input mt-1 w-full" value={type} onChange={e=>setType(e.target.value)}>{TYPES.map(x=><option key={x}>{x}</option>)}</select></label><label className="text-[12px] font-semibold">Impact<select className="input mt-1 w-full" value={impact} onChange={e=>setImpact(e.target.value)}>{IMPACT.map(x=><option key={x}>{x}</option>)}</select></label></div>
+   {!!sections.length&&<label className="block text-[12px] font-semibold">Page section <span className="text-muted font-normal">(optional)</span><select className="input mt-1 w-full" value={section} onChange={e=>setSection(e.target.value)}><option value="">Whole screen</option>{sections.map(x=><option key={x} value={x}>{x}</option>)}</select></label>}
    <label className="block text-[12px] font-semibold">What should we know?<textarea className="input mt-1 w-full min-h-28 resize-y" placeholder="Describe the issue, confusion or improvement…" value={text} onChange={e=>setText(e.target.value)}/></label>
    <div><div className="text-[12px] font-semibold mb-2">Points</div>{points.map((p,i)=><div className="flex gap-2 mb-2" key={i}><input className="input flex-1" placeholder={'Point '+(i+1)} value={p} onChange={e=>setPoints(a=>a.map((x,j)=>j===i?e.target.value:x))}/>{points.length>1&&<button className="btn-icon" onClick={()=>setPoints(a=>a.filter((_,j)=>j!==i))}><Trash2 size={15}/></button>}</div>)}<button className="btn-ghost h-9" onClick={()=>setPoints(a=>[...a,''])}><Plus size={14}/> Add point</button></div>
    <div className="grid sm:grid-cols-2 gap-3">

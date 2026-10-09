@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from 'react';
-import {BarChart3,CheckCircle2,Clock3,MessageSquare,Paperclip,RefreshCw,Search,UserRound} from 'lucide-react';
+import {BarChart3,CheckCircle2,Clock3,Download,MessageSquare,Paperclip,RefreshCw,Search,UserRound} from 'lucide-react';
 import {commentFeedback,fetchAdminUsers,fetchFeedbackStats,listFeedback,openFeedbackAttachment,updateFeedback,type FeedbackItem,type FeedbackStats,type AdminAuthUser} from '../lib/api';
 
 const STATUSES=['New','Reviewing','Accepted','Planned','In Development','Ready for Testing','Fixed','Verified','Closed','Duplicate','Not Planned','Need More Information'];
@@ -18,8 +18,9 @@ export function FeedbackReview(){
  const patch=async(data:Record<string,unknown>)=>{if(!item)return;try{await updateFeedback(item.id,data);await load()}catch(e:any){setMsg(e.message)}};
  const addNote=async()=>{if(!item||!note.trim())return;try{await commentFeedback(item.id,note.trim(),internal);setNote('');await load()}catch(e:any){setMsg(e.message)}};
  const openFile=async(id:string)=>{try{const a=await openFeedbackAttachment(id);window.open(a.url,'_blank','noopener')}catch(e:any){setMsg(e.message)}};
+ const exportCsv=()=>{const esc=(v:any)=>'"'+String(v??'').replace(/"/g,'""')+'"';const head=['Feedback No','Created','User','Role','Module','Screen','Section','Type','Impact','Status','Assigned To','Record','Description','Resolution'];const rows=filtered.map(x=>[x.feedback_no,x.created_at,x.full_name||x.username,x.role,x.module,x.screen_id,x.section,x.feedback_type,x.impact,x.status,x.assigned_name||'',x.record_no||'',x.description,x.resolution]);const blob=new Blob(['\uFEFF'+[head,...rows].map(row=>row.map(esc).join(',')).join('\n')],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='erp-feedback-'+new Date().toISOString().slice(0,10)+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
  return <div className="page space-y-4">
-  <div className="page-head"><div><div className="eyebrow">Administration</div><h1>Feedback & Review</h1><p>Central UAT inbox for ERP issues, improvements and employee review feedback.</p></div><button className="btn-ghost" onClick={()=>void load()}><RefreshCw size={15}/>{loading?'Loading…':'Refresh'}</button></div>
+  <div className="page-head"><div><div className="eyebrow">Administration</div><h1>Feedback & Review</h1><p>Central UAT inbox for ERP issues, improvements and employee review feedback.</p></div><div className="flex gap-2"><button className="btn-ghost" onClick={exportCsv}><Download size={15}/>Export CSV</button><button className="btn-ghost" onClick={()=>void load()}><RefreshCw size={15}/>{loading?'Loading…':'Refresh'}</button></div></div>
   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
    {[['New',counts.new,MessageSquare],['Open',counts.active,Clock3],['Blocking',counts.blocking,BarChart3],['Ready for testing',counts.testing,CheckCircle2],['Verified / closed',counts.closed,CheckCircle2]].map(([l,n,I]:any)=><div className="card p-3" key={l}><div className="flex items-center gap-2 text-muted text-[11px] font-semibold"><I size={14}/>{l}</div><div className="text-2xl font-bold mt-1">{n}</div></div>)}
   </div>
