@@ -33,8 +33,12 @@ Files: src/lib/load-planning.ts, src/features/smart-load-planning.tsx, src/nav.t
 ## Stage 2 — optimizer improvement
 Benchmark 3+ engines against reproducible fixtures; improve packing quality, multivehicle recommendations, multistop access, stacking limits, manual rotation and printable loading reports. Add reusable cargo/vehicle dimension masters.
 
-## Stage 3 — full ERP walkthrough
-Wire approved plans into VP/warehouse loading verification, LR/DC allocations and dispatch readiness. Track actual loaded quantities, exceptions, overrides and delivery reconciliation. Preserve original records and avoid duplicate sources of truth.
+## Stage 3 — full ERP walkthrough — COMPLETE
+Implemented end-to-end synchronization: Order → Smart Load Plan → Approval → Physical Loading Reconciliation → Loading Confirmed → LR → Dispatch → Delivery → POD → Billing → Payment Partial/Paid.
+
+Operational integration includes Warehouse road load-plan verification, planned/actual/variance quantities, supervisor confirmation, LR finalisation gate, dispatch-readiness checklist, planned-truck enforcement, delivery/POD transition guards, billing/payment propagation and guarded financial rollback. Order 360, LR 360 and Bill 360 expose the linked workflow with direct navigation.
+
+Approved/downstream records are protected against contradictory order, LR and planning edits. Legacy records without Smart Load Plans remain usable so the feature does not break existing demo flows.
 
 ## Stage 4 — advanced features
 Palletization, multi-stop LIFO accessibility, axle/center-of-gravity calculations only with verified vehicle specifications, async optimization and large-shipment benchmarks.

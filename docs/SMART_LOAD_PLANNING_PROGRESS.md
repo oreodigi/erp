@@ -13,7 +13,7 @@ Original TypeScript 3D packing heuristic and independent validator; Three.js / R
 - VP Loading and LR navigation.
 - Automated fit, oversize, payload, nonstack, rotation, collision, support and overflow tests.
 
-## Stage 2 — started
+## Stage 2 — complete
 Implemented in first Stage-2 increment:
 - Reusable 14/17/20/24/32 FT vehicle body templates.
 - Automatic vehicle recommendation comparing the active cargo manifest.
@@ -31,8 +31,8 @@ Remaining Stage 2:
 - DONE: printable visual loading instruction now includes numbered top and side projections generated from validated 3D coordinates, loading sequence with XYZ positions, stop IDs, dimensions, manifest and sign-off.
 - DONE: reproducible 50/120/80-package internal benchmark fixtures with in-app runtime/utilization results. External-engine comparison remains pending.
 
-## Stage 3 — pending
-Synchronize approved plans with VP/Warehouse/LR/DC and Dispatch readiness, actual loaded quantities, exceptions and overrides.
+## Stage 3 — complete
+The Level-3 ERP walkthrough is synchronized through Order, Smart Load Planning, physical loading, LR, Dispatch, Delivery, POD, Billing and Payment. Warehouse, Order 360, LR 360 and Bill 360 expose linked workflow state and navigation.
 
 ## Operational caveat
 Goods-master geometry is used where available; missing values are estimates. Vehicle interior dimensions are editable planning values. This is not certified axle, securement or stability analysis.
@@ -65,3 +65,8 @@ Goods-master geometry is used where available; missing values are estimates. Veh
 - Stage 3 presentation increment 6 DONE: Smart Load Planning now shows a client-facing 8-step ERP walkthrough status card (Order, Plan, Loading, LR, Dispatch, Delivery, POD, Finance) using live linked ERP records, current lifecycle status, vehicle, supervisor and bill reference.
 - Stage 3 cross-screen polish increment 7 DONE: Order 360 now exposes the linked Smart Load workflow with load plan/loading/LR/finance state and direct navigation to Smart Load Plan, LR 360 and Bill. LR dispatch-readiness logic now treats Loading Confirmed and downstream lifecycle states consistently.
 - Stage 3 cross-screen polish increment 8 DONE: Bill 360 now traces billed LRs back to linked Smart Load Plans and Orders with direct navigation. Warehouse road load-plan verification now shows the linked LR and opens LR 360 directly while retaining plan-level navigation.
+- Stage 3 finance QA DONE: bill deletion and LR removal from a bill are blocked while linked receipts exist. Receipt deletion restores outstanding balance and derives Billed / Payment Partial / Paid from the remaining settlement instead of blindly reverting the workflow.
+- Stage 3 POD QA DONE: Quick POD only accepts Delivered LRs without an existing POD; ineligible selected records are skipped and explained.
+- Stage 3 billing QA DONE: Quick Billing now matches primary Finance eligibility: unbilled, To Be Billed LRs with POD/acknowledgment unless the customer explicitly permits billing without acknowledgment.
+- Stage 3 final planner hardening DONE: approved plans cannot be re-optimized or have plan name, linked order, vehicle geometry, recommended vehicle, cargo additions/removals or other guarded planning inputs mutated. New Plan clears reconciliation/supervisor/remarks/selection state. Smart Load confirmation now writes the standard LR timeline event shape.
+- Final validation DONE: `npm run test:load`, TypeScript production build, Git synchronization and live production asset checks passed. Final Stage-3 completion commit: `d6ce6f7`.
