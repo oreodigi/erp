@@ -32,6 +32,42 @@ function exportCsv(rows: Month[]) {
   const a = document.createElement('a'); a.href = url; a.download = 'sk-translines-monthly-ebita-demo.csv'; a.click();
   URL.revokeObjectURL(url);
 }
+
+function printStatement(rows: Month[]) {
+  // Render an independent HTML statement instead of printing the app shell.
+  // This also works in mobile Safari, where app layouts can print blank.
+  const popup = window.open('', '_blank');
+  if (!popup) { window.alert('Please allow pop-ups to open the printable EBITA report.'); return; }
+  const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char] || char));
+  const fields = [
+    ['Operating revenue', (m: Month) => m.revenue],
+    ...categories.map(category => [category.label, (m: Month) => Number(m[category.key])] as [string, (m: Month) => number]),
+    ['Total costs incl. depreciation', (m: Month) => expenses(m) + m.depreciation],
+    ['EBITA', (m: Month) => ebita(m)],
+  ] as [string, (m: Month) => number][];
+  const table = fields.map(([label, value]) => '<tr><th>' + escapeHtml(label) + '</th>' + rows.map(m => '<td>' + escapeHtml(money(value(m))) + '</td>').join('') + '</tr>').join('');
+  const margin = '<tr><th>EBITA margin</th>' + rows.map(m => '<td>' + (100 * ebita(m) / m.revenue).toFixed(1) + '%</td>').join('') + '</tr>';
+  popup.document.open();
+  popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>SK Translines - Monthly EBITA</title><style>
+    body{font-family:Arial,sans-serif;color:#172033;background:white;margin:0;padding:24px}
+    h1{font-size:23px;margin:0 0 6px}.sub{color:#64748b;margin:0 0 16px}
+    .note{padding:12px;background:#fff4d6;border:1px solid #efcd72;border-radius:6px;margin:16px 0;font-size:13px}
+    table{border-collapse:collapse;width:100%;font-size:12px}th,td{padding:10px 8px;border-bottom:1px solid #dbe1e8}
+    th{text-align:left}thead th,td{text-align:right}thead th:first-child{text-align:left}
+    tbody tr:last-child{font-weight:bold;background:#eef4fa}
+    .actions{margin:0 0 20px;display:flex;gap:10px}button{padding:10px 16px;background:#233e85;color:white;border:0;border-radius:6px;font-size:15px}
+    .foot{margin-top:24px;font-size:11px;color:#64748b}
+    @page{size:A4 landscape;margin:12mm}
+    @media print{.actions{display:none!important}body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}table{font-size:10px}tr{break-inside:avoid}}
+  </style></head><body><div class="actions"><button onclick="window.print()">Print / Save as PDF</button></div>
+  <h1>SK Translines — Monthly EBITA Statement</h1><p class="sub">${escapeHtml(rows.map(m=>m.key).join(' • '))} | All amounts in INR</p>
+  <div class="note"><strong>DEMONSTRATION DATA — NOT ACTUAL ACCOUNTS.</strong> Illustrative monthly financial figures. Not reconciled to ERP transactions or accounting ledgers.</div>
+  <table><thead><tr><th>Particulars</th>${rows.map(m=>'<th>'+escapeHtml(m.key)+'</th>').join('')}</tr></thead><tbody>${table}${margin}</tbody></table>
+  <div class="foot">EBITA = revenue − operating costs − depreciation. Interest, income taxes and amortization are excluded. This document is for ERP demonstration only.</div>
+  </body></html>`);
+  popup.document.close();
+}
+
 export function MonthlyEBITA() {
   const [selected, setSelected] = useState(DATA[DATA.length - 1].key);
   const [view, setView] = useState<'monthly' | 'all'>('monthly');
@@ -45,7 +81,7 @@ export function MonthlyEBITA() {
         <select aria-label="Reporting month" className="input h-9" value={selected} onChange={e => setSelected(e.target.value)}>{DATA.map(m => <option key={m.key}>{m.key}</option>)}</select>
         <button className="btn-ghost h-9" onClick={() => setView(view === 'all' ? 'monthly' : 'all')}>{view === 'all' ? 'Selected month' : 'All months'}</button>
         <button className="btn-primary h-9" onClick={() => exportCsv(rows)}><Download size={15}/> Export CSV</button>
-        <button className="btn-ghost h-9" onClick={() => window.print()}><FileText size={15}/> Print / PDF</button>
+        <button className="btn-ghost h-9" onClick={() => printStatement(rows)}><FileText size={15}/> Print / PDF</button>
       </div>} />
     <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm"><b>Demonstration figures.</b> This report uses illustrative monthly financial data, not reconciled ERP accounts. All amounts below are in Indian rupees unless marked ₹ lakh.</div>
     <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
