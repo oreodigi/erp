@@ -103,7 +103,7 @@ export function MonthlyEBITA() {
   return <div className="grid gap-5 min-w-0">
     <PageHeader eyebrow="Finance / Management reporting" title="Monthly EBITA" subtitle="Earnings before interest, taxes and amortization • Monthly management statement"
       actions={<div className="flex flex-wrap gap-2">
-        <select aria-label="Reporting month" className="input h-9" value={selected} onChange={e => setSelected(e.target.value)}>{DATA.map(m => <option key={m.key}>{m.key}</option>)}</select>
+        <select aria-label="Reporting month" className="input h-9" value={current.key} onChange={e => setSelected(e.target.value)}>{DATA.map(m => <option key={m.key}>{m.key}</option>)}</select>
         <select className="input h-9" aria-label="Business segment" value={railOnly?'rail':'all'} onChange={e=>setRailOnly(e.target.value==='rail')}><option value="rail">Railway / Rake</option><option value="all">All Operations</option></select>
         <button className="btn-ghost h-9" onClick={() => setView(view === 'all' ? 'monthly' : 'all')}>{view === 'all' ? 'Selected month' : 'All months'}</button>
         <button className="btn-primary h-9" onClick={() => exportCsv(rows)}><Download size={15}/> Export CSV</button>
