@@ -44,12 +44,12 @@ const categories: { key: keyof Month; label: string }[] = [
 ];
 const money = (n: number) => inr(n * lakh);
 function exportCsv(rows: Month[]) {
-  const header = ['Month','Revenue','Operating expenses','Depreciation','EBITA','EBITA margin %','Interest excluded','Amortization excluded','Income tax excluded'];
-  const values = rows.map(m => [m.key,m.revenue,expenses(m),m.depreciation,ebita(m),(100 * ebita(m) / m.revenue).toFixed(2),m.interest,m.amortization,m.tax]);
+  const header = ['Month','Revenue from ERP','Identified costs only','Depreciation NOT available','Provisional surplus NOT EBITA','Provisional margin %','WARNING: incomplete expenses'];
+  const values = rows.map(m => [m.key,m.revenue,expenses(m),'NOT RECORDED',ebita(m),m.revenue?(100 * ebita(m) / m.revenue).toFixed(2):'N/A','Not a verified financial statement']);
   const csv = [header,...values].map(row => row.map(x => '"' + String(x).replace(/"/g,'""') + '"').join(',')).join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'sk-translines-monthly-ebita-demo.csv'; a.click();
+  const a = document.createElement('a'); a.href = url; a.download = 'sk-translines-provisional-pnl.csv'; a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -62,11 +62,11 @@ function printStatement(rows: Month[]) {
   const fields = [
     ['Operating revenue', (m: Month) => m.revenue],
     ...categories.map(category => [category.label, (m: Month) => Number(m[category.key])] as [string, (m: Month) => number]),
-    ['Total costs incl. depreciation', (m: Month) => expenses(m) + m.depreciation],
-    ['EBITA', (m: Month) => ebita(m)],
+    ['Identified costs (incomplete)', (m: Month) => expenses(m) + m.depreciation],
+    ['Provisional operating surplus (NOT EBITA)', (m: Month) => ebita(m)],
   ] as [string, (m: Month) => number][];
   const table = fields.map(([label, value]) => '<tr><th>' + escapeHtml(label) + '</th>' + rows.map(m => '<td>' + escapeHtml(money(value(m))) + '</td>').join('') + '</tr>').join('');
-  const margin = '<tr><th>EBITA margin</th>' + rows.map(m => '<td>' + (100 * ebita(m) / m.revenue).toFixed(1) + '%</td>').join('') + '</tr>';
+  const margin = '<tr><th>Provisional margin (NOT EBITA)</th>' + rows.map(m => '<td>' + (100 * ebita(m) / m.revenue).toFixed(1) + '%</td>').join('') + '</tr>';
   popup.document.open();
   popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>SK Translines - Monthly EBITA</title><style>
     body{font-family:Arial,sans-serif;color:#172033;background:white;margin:0;padding:24px}
@@ -80,10 +80,10 @@ function printStatement(rows: Month[]) {
     @page{size:A4 landscape;margin:12mm}
     @media print{.actions{display:none!important}body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}table{font-size:10px}tr{break-inside:avoid}}
   </style></head><body><div class="actions"><button onclick="window.print()">Print / Save as PDF</button></div>
-  <h1>SK Translines — Monthly EBITA Statement</h1><p class="sub">${escapeHtml(rows.map(m=>m.key).join(' • '))} | All amounts in INR</p>
-  <div class="note"><strong>DEMONSTRATION DATA — NOT ACTUAL ACCOUNTS.</strong> Illustrative monthly financial figures. Not reconciled to ERP transactions or accounting ledgers.</div>
+  <h1>SK Translines — Provisional Railway Profit &amp; Loss Statement</h1><p class="sub">${escapeHtml(rows.map(m=>m.key).join(' • '))} | All amounts in INR</p>
+  <div class="note"><strong>ERP SOURCE RECORDS — INCOMPLETE ACCOUNTING.</strong> Revenue and identifiable costs come from the current ERP dataset; missing salary, rent, fixed costs, depreciation and other overheads mean EBITA cannot yet be verified.</div>
   <table><thead><tr><th>Particulars</th>${rows.map(m=>'<th>'+escapeHtml(m.key)+'</th>').join('')}</tr></thead><tbody>${table}${margin}</tbody></table>
-  <div class="foot">EBITA = revenue − operating costs − depreciation. Interest, income taxes and amortization are excluded. This document is for ERP demonstration only.</div>
+  <div class="foot">PROVISIONAL P&L, NOT VERIFIED EBITA. Complete and reconcile all operating expense ledgers and depreciation before publishing an EBITA statement.</div>
   </body></html>`);
   popup.document.close();
 }
@@ -99,7 +99,7 @@ export function MonthlyEBITA() {
   const current = DATA.find(m => m.key === selected) || DATA[0] || sourceMonth(db,'',railOnly);
   const rows = view === 'all' ? DATA : [current];
   const e = ebita(current);
-  const chart = useMemo(() => DATA.map(m => ({ month: m.key.slice(0,3), Revenue: m.revenue, Expenses: expenses(m) + m.depreciation, EBITA: ebita(m) })), []);
+  const chart = useMemo(() => DATA.map(m => ({ month: m.key, Revenue: m.revenue, 'Mapped costs': expenses(m) + m.depreciation, 'Provisional surplus': ebita(m) })), [DATA]);
   return <div className="grid gap-5 min-w-0">
     <PageHeader eyebrow="Finance / Management reporting" title="Monthly EBITA" subtitle="Earnings before interest, taxes and amortization • Monthly management statement"
       actions={<div className="flex flex-wrap gap-2">
@@ -116,10 +116,10 @@ export function MonthlyEBITA() {
       <KPI label="Provisional surplus" value={compactINR(e * lakh)} icon={TrendingUp} tone={e >= 0 ? 'ok' : 'bad'}/>
       <KPI label="Provisional margin" value={(100 * e / current.revenue).toFixed(1) + '%'} icon={TrendingUp} tone={e >= 0 ? 'ok' : 'bad'}/>
     </section>
-    <Card title="Monthly profitability trend" subtitle="₹ lakh • Revenue, costs including depreciation, and EBITA across reporting months">
-      <div style={{ height: 300 }} className="w-full min-w-0"><ResponsiveContainer width="100%" height="100%"><BarChart data={chart} margin={{top:8,right:8,bottom:0,left:0}}><CartesianGrid stroke="var(--grid)" vertical={false}/><XAxis dataKey="month"/><YAxis/><Tooltip formatter={(v) => '₹' + v + ' lakh'}/><Legend/><Bar dataKey="Revenue" fill="#7c6de6" radius={[4,4,0,0]}/><Bar dataKey="Expenses" fill="#e5a14b" radius={[4,4,0,0]}/><Bar dataKey="EBITA" fill="#20a783" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
+    <Card title="ERP revenue and mapped costs trend (incomplete)" subtitle="₹ lakh • Unrecorded costs and depreciation excluded; not a verified EBITA trend">
+      <div style={{ height: 300 }} className="w-full min-w-0"><ResponsiveContainer width="100%" height="100%"><BarChart data={chart} margin={{top:8,right:8,bottom:0,left:0}}><CartesianGrid stroke="var(--grid)" vertical={false}/><XAxis dataKey="month"/><YAxis/><Tooltip formatter={(v) => '₹' + v + ' lakh'}/><Legend/><Bar dataKey="Revenue" fill="#7c6de6" radius={[4,4,0,0]}/><Bar dataKey="Mapped costs" fill="#e5a14b" radius={[4,4,0,0]}/><Bar dataKey="Provisional surplus" fill="#20a783" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
     </Card>
-    <Card title="Monthly Profit & Loss (ERP source data)" subtitle="EBITA = revenue − operating costs − depreciation. Interest, income tax and amortization are excluded.">
+    <Card title="Monthly Profit & Loss (ERP source data)" subtitle="In-source income and costs only • Missing overheads and depreciation prevent verified EBITA">
       <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-line text-left"><th className="py-3 pr-4">Particulars</th>{rows.map(m => <th key={m.key} className="py-3 px-3 text-right whitespace-nowrap">{m.key}</th>)}</tr></thead><tbody>
         <tr className="border-b border-line font-semibold"><td className="py-3 pr-4">Operating revenue</td>{rows.map(m => <td key={m.key} className="text-right px-3 whitespace-nowrap">{money(m.revenue)}</td>)}</tr>
         {categories.map(c => <tr key={c.key} className="border-b border-line"><td className="py-2 pr-4">{c.label}</td>{rows.map(m => <td key={m.key} className="text-right px-3 whitespace-nowrap">{money(Number(m[c.key]))}</td>)}</tr>)}
