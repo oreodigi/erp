@@ -34,6 +34,23 @@ const sourceMonth = (db:any, ym:string, railOnly:boolean):Month => {
   const admin=railOnly?0:exp.reduce((t:number,e:any)=>t+Number(e.amount||0),0)-diesel-tolls+(db.monthlyExpenses||[]).filter((e:any)=>String(e.date||'').slice(0,7)===ym).reduce((t:number,e:any)=>t+Number(e.amount||0),0);
   return {key:ym,revenue:revenue/lakh,diesel:diesel/lakh,transport:(railway+tp+delivery)/lakh,payroll:0,tolls:tolls/lakh,maintenance:hamali/lakh,admin:admin/lakh,depreciation:0,interest:0,amortization:0,tax:0};
 };
+// Railway route split follows the actual bill-LR-rake relationships.
+function railRouteBreakdown(db:any, ym:string) {
+  const lrs=new Map<string,any>((db.lrs||[]).map((lr:any)=>[String(lr.id),lr]));
+  const schedules=new Map<string,any>((db.schedules||[]).map((s:any)=>[String(s.id),s]));
+  return ['GH','KL'].map(dest=>{
+    const rakes=(db.schedules||[]).filter((s:any)=>String(s.date||'').slice(0,7)===ym && String(s.destId||'')===dest);
+    const rakeIds=new Set(rakes.map((s:any)=>String(s.id)));
+    const billLines=(db.bills||[]).filter((b:any)=>!b.deleted&&String(b.date||'').slice(0,7)===ym)
+      .flatMap((b:any)=>b.rows||[]).filter((r:any)=>{
+        const lr=lrs.get(String(r.lrId));
+        return lr&&rakeIds.has(String(lr.scheduleId));
+      });
+    const sales=billLines.reduce((total:number,r:any)=>total+Number(r.net??(Number(r.freight||0)+Number(r.add||0)-Number(r.sub||0))),0);
+    const railway=rakes.reduce((total:number,s:any)=>total+(s.mrrr?.rows||[]).reduce((a:number,r:any)=>a+Number(r.railFreight||0),0),0);
+    return {dest,label:dest==='GH'?'GHT / Guwahati':'KOL / Kolkata',sales,railway,rakes:rakes.length,billedLines:billLines.length};
+  });
+}
 const expenses = (m: Month) => m.diesel + m.transport + m.payroll + m.tolls + m.maintenance + m.admin;
 const ebita = (m: Month) => m.revenue - expenses(m) - m.depreciation;
 const categories: { key: keyof Month; label: string }[] = [
@@ -99,6 +116,7 @@ export function MonthlyEBITA() {
   const current = DATA.find(m => m.key === selected) || DATA[0] || sourceMonth(db,'',railOnly);
   const rows = view === 'all' ? DATA : [current];
   const e = ebita(current);
+  const routeSplit = useMemo(()=>railRouteBreakdown(db,current.key),[db,current.key]);
   const chart = useMemo(() => DATA.map(m => ({ month: m.key, Revenue: m.revenue, 'Mapped costs': expenses(m) + m.depreciation, 'Provisional surplus': ebita(m) })), [DATA]);
   return <div className="grid gap-5 min-w-0">
     <PageHeader eyebrow="Finance / Management reporting" title="Monthly EBITA" subtitle="Earnings before interest, taxes and amortization • Monthly management statement"
@@ -116,6 +134,12 @@ export function MonthlyEBITA() {
       <KPI label="Provisional surplus" value={compactINR(e * lakh)} icon={TrendingUp} tone={e >= 0 ? 'ok' : 'bad'}/>
       <KPI label="Provisional margin" value={(100 * e / current.revenue).toFixed(1) + '%'} icon={TrendingUp} tone={e >= 0 ? 'ok' : 'bad'}/>
     </section>
+    {railOnly && <Card title="Railway route breakdown — GHT / KOL" subtitle="Invoice-level revenue and rake MR/RR freight. Source-document dates can fall in different months.">
+      <div className="overflow-x-auto"><table className="w-full text-sm min-w-[520px]">
+        <thead><tr className="border-b border-line"><th className="text-left p-3">Rail head</th><th className="text-right p-3">Sales excl. GST</th><th className="text-right p-3">Railway cost</th><th className="text-right p-3">Rakes</th><th className="text-right p-3">Billed LR lines</th></tr></thead>
+        <tbody>{routeSplit.map(r=><tr key={r.dest} className="border-b border-line"><td className="p-3 font-medium">{r.label}</td><td className="p-3 text-right">{inr(r.sales)}</td><td className="p-3 text-right">{inr(r.railway)}</td><td className="p-3 text-right">{r.rakes}</td><td className="p-3 text-right">{r.billedLines}</td></tr>)}</tbody>
+      </table></div>
+    </Card>}
     <Card title="ERP revenue and mapped costs trend (incomplete)" subtitle="₹ lakh • Unrecorded costs and depreciation excluded; not a verified EBITA trend">
       <div style={{ height: 300 }} className="w-full min-w-0"><ResponsiveContainer width="100%" height="100%"><BarChart data={chart} margin={{top:8,right:8,bottom:0,left:0}}><CartesianGrid stroke="var(--grid)" vertical={false}/><XAxis dataKey="month"/><YAxis/><Tooltip formatter={(v) => '₹' + v + ' lakh'}/><Legend/><Bar dataKey="Revenue" fill="#7c6de6" radius={[4,4,0,0]}/><Bar dataKey="Mapped costs" fill="#e5a14b" radius={[4,4,0,0]}/><Bar dataKey="Provisional surplus" fill="#20a783" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
     </Card>
