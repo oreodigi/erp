@@ -37,10 +37,10 @@ const sourceMonth = (db:any, ym:string, railOnly:boolean):Month => {
 const expenses = (m: Month) => m.diesel + m.transport + m.payroll + m.tolls + m.maintenance + m.admin;
 const ebita = (m: Month) => m.revenue - expenses(m) - m.depreciation;
 const categories: { key: keyof Month; label: string }[] = [
-  { key: 'diesel', label: 'Diesel & fuel' }, { key: 'transport', label: 'Transporter / freight costs' },
-  { key: 'payroll', label: 'Driver & staff salaries' }, { key: 'tolls', label: 'Tolls & trip charges' },
-  { key: 'maintenance', label: 'Fleet maintenance' }, { key: 'admin', label: 'Office & administration' },
-  { key: 'depreciation', label: 'Depreciation (included in EBITA)' },
+  { key: 'diesel', label: 'Diesel & fuel' }, { key: 'transport', label: 'Railway, transporter & delivery costs' },
+  { key: 'payroll', label: 'Driver & staff salaries (not mapped)' }, { key: 'tolls', label: 'Tolls & trip charges' },
+  { key: 'maintenance', label: 'GRN hamali / handling' }, { key: 'admin', label: 'Other mapped trip & monthly charges' },
+  { key: 'depreciation', label: 'Depreciation (not mapped)' },
 ];
 const money = (n: number) => inr(n * lakh);
 function exportCsv(rows: Month[]) {
@@ -65,7 +65,7 @@ function printStatement(rows: Month[]) {
     ['Identified costs (incomplete)', (m: Month) => expenses(m) + m.depreciation],
     ['Provisional operating surplus (NOT EBITA)', (m: Month) => ebita(m)],
   ] as [string, (m: Month) => number][];
-  const table = fields.map(([label, value]) => '<tr><th>' + escapeHtml(label) + '</th>' + rows.map(m => '<td>' + escapeHtml(money(value(m))) + '</td>').join('') + '</tr>').join('');
+  const table = fields.map(([label, value]) => '<tr><th>' + escapeHtml(label) + '</th>' + rows.map(m => '<td>' + escapeHtml((['Driver & staff salaries (not mapped)','Depreciation (not mapped)'].includes(label)?'Not mapped':money(value(m)))) + '</td>').join('') + '</tr>').join('');
   const margin = '<tr><th>Provisional margin (NOT EBITA)</th>' + rows.map(m => '<td>' + (100 * ebita(m) / m.revenue).toFixed(1) + '%</td>').join('') + '</tr>';
   popup.document.open();
   popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>SK Translines - Monthly EBITA</title><style>
@@ -112,7 +112,7 @@ export function MonthlyEBITA() {
     <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm"><b>{source==='legacy'&&isServerBacked()?'Server ERP records':'Browser sample ERP records'} — INCOMPLETE PROFIT &amp; LOSS.</b> Revenue and mapped railway / transporter / trip costs are derived from current ERP transactions. Payroll, fixed overheads, depreciation and other unclassified expenses are missing. The displayed operating surplus is NOT verified EBITA.</div>
     <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       <KPI label="Revenue" value={compactINR(current.revenue * lakh)} icon={Wallet}/>
-      <KPI label="Operating costs + depreciation" value={compactINR((expenses(current) + current.depreciation) * lakh)} icon={BarChart3}/>
+      <KPI label="Mapped costs (incomplete)" value={compactINR((expenses(current) + current.depreciation) * lakh)} icon={BarChart3}/>
       <KPI label="Provisional surplus" value={compactINR(e * lakh)} icon={TrendingUp} tone={e >= 0 ? 'ok' : 'bad'}/>
       <KPI label="Provisional margin" value={(100 * e / current.revenue).toFixed(1) + '%'} icon={TrendingUp} tone={e >= 0 ? 'ok' : 'bad'}/>
     </section>
@@ -122,8 +122,8 @@ export function MonthlyEBITA() {
     <Card title="Monthly Profit & Loss (ERP source data)" subtitle="In-source income and costs only • Missing overheads and depreciation prevent verified EBITA">
       <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-line text-left"><th className="py-3 pr-4">Particulars</th>{rows.map(m => <th key={m.key} className="py-3 px-3 text-right whitespace-nowrap">{m.key}</th>)}</tr></thead><tbody>
         <tr className="border-b border-line font-semibold"><td className="py-3 pr-4">Operating revenue</td>{rows.map(m => <td key={m.key} className="text-right px-3 whitespace-nowrap">{money(m.revenue)}</td>)}</tr>
-        {categories.map(c => <tr key={c.key} className="border-b border-line"><td className="py-2 pr-4">{c.label}</td>{rows.map(m => <td key={m.key} className="text-right px-3 whitespace-nowrap">{money(Number(m[c.key]))}</td>)}</tr>)}
-        <tr className="border-b border-line font-semibold"><td className="py-3 pr-4">Total costs incl. depreciation</td>{rows.map(m => <td key={m.key} className="text-right px-3 whitespace-nowrap">{money(expenses(m) + m.depreciation)}</td>)}</tr>
+        {categories.map(c => <tr key={c.key} className="border-b border-line"><td className="py-2 pr-4">{c.label}</td>{rows.map(m => <td key={m.key} className="text-right px-3 whitespace-nowrap">{(['payroll','depreciation'].includes(c.key)?'Not mapped':money(Number(m[c.key])))}</td>)}</tr>)}
+        <tr className="border-b border-line font-semibold"><td className="py-3 pr-4">Identified costs only (incomplete)</td>{rows.map(m => <td key={m.key} className="text-right px-3 whitespace-nowrap">{money(expenses(m) + m.depreciation)}</td>)}</tr>
         <tr className="border-b border-line font-bold"><td className="py-3 pr-4">Provisional surplus — NOT EBITA</td>{rows.map(m => <td key={m.key} className="text-right px-3 whitespace-nowrap">{money(ebita(m))}</td>)}</tr>
         <tr className="border-b border-line"><td className="py-3 pr-4">Provisional margin</td>{rows.map(m => <td key={m.key} className="text-right px-3">{(100 * ebita(m) / m.revenue).toFixed(1)}%</td>)}</tr>
       </tbody></table></div>
