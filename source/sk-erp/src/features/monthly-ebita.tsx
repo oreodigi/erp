@@ -110,39 +110,44 @@ function printStatement(rows: Month[], railOnly: boolean) {
 
 type FreightDifferenceRow = { id:string; lrNo:string; date:string; booking:number; onward:number|null; difference:number|null; source:string };
 function freightDifferenceRows(db:any, month:string):FreightDifferenceRow[] {
+  // Only explicitly recorded subcontractor freight is a cost. The trip.onwardFreight
+  // field represents customer freight on own vehicles and must NOT be subtracted.
   const freightByLr=new Map<string,number>();
   (db.tpSlips||[]).forEach((slip:any)=>(slip.rows||[]).forEach((r:any)=>{
-    const id=String(r.lrId||''); if(id && !freightByLr.has(id)) freightByLr.set(id,Number(r.freight||0));
+    const id=String(r.lrId||'');
+    if(id&&r.freight!=null&&!freightByLr.has(id))freightByLr.set(id,Number(r.freight));
   }));
-  const tripByLr=new Map<string,any>();
-  (db.trips||[]).forEach((t:any)=>{if(t.lrId&&!tripByLr.has(String(t.lrId)))tripByLr.set(String(t.lrId),t);});
   return (db.lrs||[]).filter((lr:any)=>String(lr.outDate||lr.placeDate||'').slice(0,7)===month&&lr.mode!=='Railway')
     .map((lr:any)=>{
-      const id=String(lr.id), trip=tripByLr.get(id);
-      const onward=freightByLr.has(id)?freightByLr.get(id)!:trip?.onwardFreight!=null?Number(trip.onwardFreight):lr.mkt?.freight!=null?Number(lr.mkt.freight):null;
+      const id=String(lr.id);
+      const marketFreight=lr.mkt?.freight;
+      const onward=freightByLr.has(id)?freightByLr.get(id)!:marketFreight!=null?Number(marketFreight):null;
       const booking=Number(lr.freight||0);
-      return {id,lrNo:String(lr.lrNo||id),date:String(lr.outDate||lr.placeDate||''),booking,onward,difference:onward===null?null:booking-onward,source:freightByLr.has(id)?'Transporter slip':trip?.onwardFreight!=null?'Trip':lr.mkt?.freight!=null?'Market LR':'Not recorded'};
+      return {id,lrNo:String(lr.lrNo||id),date:String(lr.outDate||lr.placeDate||''),booking,onward,difference:onward===null?null:booking-onward,source:freightByLr.has(id)?'Transporter slip':marketFreight!=null?'Market LR freight':'Not recorded'};
     });
 }
 type VehiclePerformanceRow={id:string; vehicle:string; trips:number; days:number; revenue:number; costs:number; missing:number; result:number;};
 function vehiclePerformanceRows(db:any,month:string):VehiclePerformanceRow[] {
   const truckMap=new Map<string,any>((db.trucks||[]).map((t:any)=>[String(t.id),t]));
-  const lrMap=new Map<string,any>((db.lrs||[]).map((l:any)=>[String(l.id),l]));
   const billByLr=new Map<string,number>();
   (db.bills||[]).filter((b:any)=>!b.deleted).forEach((b:any)=>(b.rows||[]).forEach((r:any)=>{
-    const id=String(r.lrId||''); billByLr.set(id,(billByLr.get(id)||0)+Number(r.net??(Number(r.freight||0)+Number(r.add||0)-Number(r.sub||0))));
+    const id=String(r.lrId||'');if(!id)return;
+    billByLr.set(id,(billByLr.get(id)||0)+Number(r.net??(Number(r.freight||0)+Number(r.add||0)-Number(r.sub||0))));
   }));
   const expenseByTrip=new Map<string,number>();
   (db.tripExpenses||[]).forEach((e:any)=>{const id=String(e.tripId||'');expenseByTrip.set(id,(expenseByTrip.get(id)||0)+Number(e.amount||0));});
   const map=new Map<string,VehiclePerformanceRow>();
+  const countedLrs=new Set<string>();
   (db.trips||[]).filter((t:any)=>String(t.startDate||'').slice(0,7)===month).forEach((t:any)=>{
-    const id=String(t.truckId||''); const truck=truckMap.get(id); const lr=lrMap.get(String(t.lrId||''));
+    const id=String(t.truckId||'');const truck=truckMap.get(id);
     const row=map.get(id)||{id,vehicle:String(truck?.number||id||'Unassigned'),trips:0,days:0,revenue:0,costs:0,missing:0,result:0};
     row.trips++;
     const start=Date.parse(String(t.startDate||'')),end=Date.parse(String(t.endDate||''));
     row.days+=(Number.isFinite(start)&&Number.isFinite(end)&&end>=start)?Math.floor((end-start)/86400000)+1:0;
-    const booked=lr?billByLr.get(String(lr.id)):undefined;
-    if(booked===undefined)row.missing++; else row.revenue+=booked;
+    const lrId=String(t.lrId||'');
+    // One LR can appear in multiple trip records; its billed revenue is counted once.
+    if(!lrId||!billByLr.has(lrId))row.missing++;
+    else if(!countedLrs.has(lrId)){row.revenue+=billByLr.get(lrId)!;countedLrs.add(lrId);}
     row.costs+=expenseByTrip.get(String(t.id))||0;
     row.result=row.revenue-row.costs;
     map.set(id,row);
