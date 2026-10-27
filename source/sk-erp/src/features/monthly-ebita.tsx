@@ -105,6 +105,57 @@ function printStatement(rows: Month[], railOnly: boolean) {
   popup.document.close();
 }
 
+
+type FreightDifferenceRow = { id:string; lrNo:string; date:string; booking:number; onward:number|null; difference:number|null; source:string };
+function freightDifferenceRows(db:any, month:string):FreightDifferenceRow[] {
+  const freightByLr=new Map<string,number>();
+  (db.tpSlips||[]).forEach((slip:any)=>(slip.rows||[]).forEach((r:any)=>{
+    const id=String(r.lrId||''); if(id && !freightByLr.has(id)) freightByLr.set(id,Number(r.freight||0));
+  }));
+  const tripByLr=new Map<string,any>();
+  (db.trips||[]).forEach((t:any)=>{if(t.lrId&&!tripByLr.has(String(t.lrId)))tripByLr.set(String(t.lrId),t);});
+  return (db.lrs||[]).filter((lr:any)=>String(lr.outDate||lr.placeDate||'').slice(0,7)===month&&lr.mode!=='Railway')
+    .map((lr:any)=>{
+      const id=String(lr.id), trip=tripByLr.get(id);
+      const onward=freightByLr.has(id)?freightByLr.get(id)!:trip?.onwardFreight!=null?Number(trip.onwardFreight):lr.mkt?.freight!=null?Number(lr.mkt.freight):null;
+      const booking=Number(lr.freight||0);
+      return {id,lrNo:String(lr.lrNo||id),date:String(lr.outDate||lr.placeDate||''),booking,onward,difference:onward===null?null:booking-onward,source:freightByLr.has(id)?'Transporter slip':trip?.onwardFreight!=null?'Trip':lr.mkt?.freight!=null?'Market LR':'Not recorded'};
+    });
+}
+type VehiclePerformanceRow={id:string; vehicle:string; trips:number; days:number; revenue:number; costs:number; missing:number; result:number;};
+function vehiclePerformanceRows(db:any,month:string):VehiclePerformanceRow[] {
+  const truckMap=new Map<string,any>((db.trucks||[]).map((t:any)=>[String(t.id),t]));
+  const lrMap=new Map<string,any>((db.lrs||[]).map((l:any)=>[String(l.id),l]));
+  const billByLr=new Map<string,number>();
+  (db.bills||[]).filter((b:any)=>!b.deleted).forEach((b:any)=>(b.rows||[]).forEach((r:any)=>{
+    const id=String(r.lrId||''); billByLr.set(id,(billByLr.get(id)||0)+Number(r.net??(Number(r.freight||0)+Number(r.add||0)-Number(r.sub||0))));
+  }));
+  const expenseByTrip=new Map<string,number>();
+  (db.tripExpenses||[]).forEach((e:any)=>{const id=String(e.tripId||'');expenseByTrip.set(id,(expenseByTrip.get(id)||0)+Number(e.amount||0));});
+  const map=new Map<string,VehiclePerformanceRow>();
+  (db.trips||[]).filter((t:any)=>String(t.startDate||'').slice(0,7)===month).forEach((t:any)=>{
+    const id=String(t.truckId||''); const truck=truckMap.get(id); const lr=lrMap.get(String(t.lrId||''));
+    const row=map.get(id)||{id,vehicle:String(truck?.number||id||'Unassigned'),trips:0,days:0,revenue:0,costs:0,missing:0,result:0};
+    row.trips++;
+    const start=Date.parse(String(t.startDate||'')),end=Date.parse(String(t.endDate||''));
+    row.days+=(Number.isFinite(start)&&Number.isFinite(end)&&end>=start)?Math.floor((end-start)/86400000)+1:0;
+    const booked=lr?billByLr.get(String(lr.id)):undefined;
+    if(booked===undefined)row.missing++; else row.revenue+=booked;
+    row.costs+=expenseByTrip.get(String(t.id))||0;
+    row.result=row.revenue-row.costs;
+    map.set(id,row);
+  });
+  return [...map.values()].sort((a,b)=>a.vehicle.localeCompare(b.vehicle));
+}
+function printSchedule(title:string, month:string,headers:string[],records:string[][],disclaimer:string) {
+  const popup=window.open('','_blank');
+  if(!popup){window.alert('Allow pop-ups to print this report.');return;}
+  const esc=(v:string)=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c));
+  popup.document.open();
+  popup.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>'+esc(title)+'</title><style>body{font:13px Arial,sans-serif;padding:22px;color:#172033}h2{margin:0 0 8px}p{color:#555}table{border-collapse:collapse;width:100%}th,td{border:1px solid #bac3cf;padding:7px;text-align:left}th{background:#e8edf5}.warning{padding:10px;background:#fff1cf;margin:14px 0}.actions{margin-bottom:18px}button{padding:10px} @page{size:A4 landscape;margin:12mm}@media print{.actions{display:none}body{padding:0}tr{break-inside:avoid}}</style></head><body><div class="actions"><button onclick="window.print()">Print / Save PDF</button></div><h2>SK Translines Pvt. Ltd. — '+esc(title)+'</h2><p>Month: '+esc(month)+'</p><div class="warning">'+esc(disclaimer)+'</div><table><thead><tr>'+headers.map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+records.map(row=>'<tr>'+row.map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('')+'</tbody></table></body></html>');
+  popup.document.close();
+}
+
 export function MonthlyEBITA() {
   const db = useDB();
   const source = useStore(s=>s.source);
@@ -113,9 +164,12 @@ export function MonthlyEBITA() {
   const [railOnly,setRailOnly]=useState(true);
   const DATA = useMemo(()=>months.map(m=>sourceMonth(db,m,railOnly)),[db,months,railOnly]);
   const [view, setView] = useState<'monthly' | 'all'>('monthly');
+  const [scheduleTab,setScheduleTab]=useState<'pnl'|'freight'|'vehicle'>('pnl');
   const current = DATA.find(m => m.key === selected) || DATA[0] || sourceMonth(db,'',railOnly);
   const rows = view === 'all' ? DATA : [current];
   const e = ebita(current);
+  const freightRows=useMemo(()=>freightDifferenceRows(db,current.key),[db,current.key]);
+  const vehicleRows=useMemo(()=>vehiclePerformanceRows(db,current.key),[db,current.key]);
   const routeSplit = useMemo(()=>railRouteBreakdown(db,current.key),[db,current.key]);
   const chart = useMemo(() => DATA.map(m => ({ month: m.key, Revenue: m.revenue, 'Mapped costs': expenses(m) + m.depreciation, 'Provisional surplus': ebita(m) })), [DATA]);
   return <div className="grid gap-5 min-w-0">
@@ -140,10 +194,23 @@ export function MonthlyEBITA() {
         <tbody>{routeSplit.map(r=><tr key={r.dest} className="border-b border-line"><td className="p-3 font-medium">{r.label}</td><td className="p-3 text-right">{inr(r.sales)}</td><td className="p-3 text-right">{inr(r.railway)}</td><td className="p-3 text-right">{r.rakes}</td><td className="p-3 text-right">{r.billedLines}</td></tr>)}</tbody>
       </table></div>
     </Card>}
-    <Card title="ERP revenue and mapped costs trend (incomplete)" subtitle="₹ lakh • Unrecorded costs and depreciation excluded; not a verified EBITA trend">
+
+    <div className="flex flex-wrap gap-2" role="tablist" aria-label="Finance reporting schedule">
+      {([['pnl','Profit & Loss'],['vehicle','Vehicle Performance'],['freight','Freight Difference']] as const).map(([key,label])=><button key={key} role="tab" aria-selected={scheduleTab===key} className={scheduleTab===key?'btn-primary h-9':'btn-ghost h-9'} onClick={()=>setScheduleTab(key)}>{label}</button>)}
+    </div>
+    {scheduleTab==='vehicle'&&<Card title={'Vehicle Performance — '+current.key} subtitle="Trip-based vehicle results from ERP revenue and trip expenses. Not a complete net profit: salaries, fixed charges and unlinked bills are excluded.">
+      <div className="flex justify-end mb-3"><button className="btn-ghost" onClick={()=>printSchedule('Vehicle Performance',current.key,['Vehicle','Trips','Days','Billed revenue','Trip expenses','Provisional difference','Unbilled trips'],vehicleRows.map(r=>[r.vehicle,String(r.trips),String(r.days),inr(r.revenue),inr(r.costs),inr(r.result),String(r.missing)]),'PROVISIONAL: Unbilled trips, fixed costs and overheads are not included. Do not treat as verified vehicle profit.')}>Print / PDF</button></div>
+      <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-sm"><thead><tr className="border-b border-line">{['Vehicle','Trips','Days','Billed revenue','Trip expenses','Provisional difference','Unbilled trips'].map(h=><th key={h} className="p-2 text-right first:text-left">{h}</th>)}</tr></thead><tbody>{vehicleRows.map(r=><tr key={r.id} className="border-b border-line"><td className="p-2">{r.vehicle}</td><td className="p-2 text-right">{r.trips}</td><td className="p-2 text-right">{r.days}</td><td className="p-2 text-right">{inr(r.revenue)}</td><td className="p-2 text-right">{inr(r.costs)}</td><td className="p-2 text-right">{inr(r.result)}</td><td className="p-2 text-right">{r.missing}</td></tr>)}</tbody></table>{vehicleRows.length===0&&<p className="p-3 text-muted">No vehicle trips found in this month.</p>}</div>
+    </Card>}
+    {scheduleTab==='freight'&&<Card title={'Freight Difference — '+current.key} subtitle="LR booking amount less recorded onward freight. A missing onward cost is left unreconciled, never counted as zero.">
+      <div className="flex justify-end mb-3"><button className="btn-ghost" onClick={()=>printSchedule('Freight Difference',current.key,['LR No.','Date','Booking','Onward freight','Difference','Source'],freightRows.map(r=>[r.lrNo,r.date,inr(r.booking),r.onward===null?'Not recorded':inr(r.onward),r.difference===null?'Unreconciled':inr(r.difference),r.source]),'ERP-DERIVED: Verify the freight source before treating this schedule as a final signed accounting report.')}>Print / PDF</button></div>
+      <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-sm"><thead><tr className="border-b border-line">{['LR No.','Date','Booking amount','Onward freight','Difference','Source'].map(h=><th key={h} className="p-2 text-right first:text-left">{h}</th>)}</tr></thead><tbody>{freightRows.map(r=><tr key={r.id} className="border-b border-line"><td className="p-2">{r.lrNo}</td><td className="p-2 text-right">{r.date}</td><td className="p-2 text-right">{inr(r.booking)}</td><td className="p-2 text-right">{r.onward===null?'Not recorded':inr(r.onward)}</td><td className="p-2 text-right">{r.difference===null?'Unreconciled':inr(r.difference)}</td><td className="p-2 text-right">{r.source}</td></tr>)}</tbody></table>{freightRows.length===0&&<p className="p-3 text-muted">No road LRs found in this month.</p>}</div>
+      <p className="text-xs text-muted mt-3">Reconciled booking: {inr(freightRows.filter(r=>r.difference!==null).reduce((s,r)=>s+r.booking,0))} · Onward freight: {inr(freightRows.reduce((s,r)=>s+(r.onward||0),0))} · Difference: {inr(freightRows.reduce((s,r)=>s+(r.difference||0),0))} · Unreconciled LRs: {freightRows.filter(r=>r.difference===null).length}</p>
+    </Card>}
+    {scheduleTab==='pnl'&&<Card title="ERP revenue and mapped costs trend (incomplete)" subtitle="₹ lakh • Unrecorded costs and depreciation excluded; not a verified EBITA trend">
       <div style={{ height: 300 }} className="w-full min-w-0"><ResponsiveContainer width="100%" height="100%"><BarChart data={chart} margin={{top:8,right:8,bottom:0,left:0}}><CartesianGrid stroke="var(--grid)" vertical={false}/><XAxis dataKey="month"/><YAxis/><Tooltip formatter={(v) => '₹' + v + ' lakh'}/><Legend/><Bar dataKey="Revenue" fill="#7c6de6" radius={[4,4,0,0]}/><Bar dataKey="Mapped costs" fill="#e5a14b" radius={[4,4,0,0]}/><Bar dataKey="Provisional surplus" fill="#20a783" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
-    </Card>
-    <Card title="Profit & Loss — SK Translines Pvt. Ltd. (ERP source data)" subtitle="In-source income and costs only • Missing overheads and depreciation prevent verified EBITA">
+    </Card>}
+    {scheduleTab==='pnl'&&<Card title="Profit & Loss — SK Translines Pvt. Ltd. (ERP source data)" subtitle="In-source income and costs only • Missing overheads and depreciation prevent verified EBITA">
       <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-line text-left"><th className="py-3 pr-4">Particulars</th>{rows.map(m => <th key={m.key} className="py-3 px-3 text-right whitespace-nowrap">{m.key}</th>)}</tr></thead><tbody>
         <tr className="border-b border-line font-semibold"><td className="py-3 pr-4">Operating revenue</td>{rows.map(m => <td key={m.key} className="text-right px-3 whitespace-nowrap">{money(m.revenue)}</td>)}</tr>
         {categories.map(c => <tr key={c.key} className="border-b border-line"><td className="py-2 pr-4">{c.label}</td>{rows.map(m => <td key={m.key} className="text-right px-3 whitespace-nowrap">{(['payroll','depreciation'].includes(c.key)?'Not mapped':money(Number(m[c.key])))}</td>)}</tr>)}
@@ -151,7 +218,7 @@ export function MonthlyEBITA() {
         <tr className="border-b border-line font-bold"><td className="py-3 pr-4">Provisional surplus — NOT EBITA</td>{rows.map(m => <td key={m.key} className="text-right px-3 whitespace-nowrap">{money(ebita(m))}</td>)}</tr>
         <tr className="border-b border-line"><td className="py-3 pr-4">Provisional margin</td>{rows.map(m => <td key={m.key} className="text-right px-3">{(m.revenue?(100 * ebita(m) / m.revenue).toFixed(1)+'%':'N/A')}</td>)}</tr>
       </tbody></table></div>
-    </Card>
+    </Card>}
     <p className="text-xs text-muted">Accounting note: This is a partial calculation only. Missing salary, rent, statutory contributions, depreciation and other operating expenses cannot be assumed zero. A verified EBITA figure is withheld until these categories are reconciled. CSV values are in ₹ lakh.</p>
   </div>;
 }
