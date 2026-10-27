@@ -10,7 +10,9 @@ const lakh = 100000;
 // Generated from the currently selected ERP dataset. No fixed monthly P&L numbers.
 const sourceMonths = (db:any) => [...new Set([
   ...(db.bills||[]).map((r:any)=>String(r.date||'').slice(0,7)),
-  ...(db.schedules||[]).map((r:any)=>String(r.date||'').slice(0,7))
+  ...(db.schedules||[]).map((r:any)=>String(r.date||'').slice(0,7)),
+  ...(db.lrs||[]).map((r:any)=>String(r.outDate||r.placeDate||'').slice(0,7)),
+  ...(db.trips||[]).map((r:any)=>String(r.startDate||'').slice(0,7))
 ].filter((x:string)=>/^\d{4}-\d{2}$/.test(x)))].sort().reverse() as string[];
 const sourceMonth = (db:any, ym:string, railOnly:boolean):Month => {
   const lrMap = new Map((db.lrs||[]).map((x:any)=>[String(x.id),x]));
@@ -147,6 +149,12 @@ function vehiclePerformanceRows(db:any,month:string):VehiclePerformanceRow[] {
   });
   return [...map.values()].sort((a,b)=>a.vehicle.localeCompare(b.vehicle));
 }
+function exportScheduleCsv(filename:string, headers:string[],records:string[][]) {
+  const contents=[headers,...records].map(row=>row.map(cell=>'"'+String(cell).replace(/"/g,'""')+'"').join(',')).join('\\r\\n');
+  const url=URL.createObjectURL(new Blob([contents],{type:'text/csv;charset=utf-8;'}));
+  const link=document.createElement('a'); link.href=url;link.download=filename;link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
 function printSchedule(title:string, month:string,headers:string[],records:string[][],disclaimer:string) {
   const popup=window.open('','_blank');
   if(!popup){window.alert('Allow pop-ups to print this report.');return;}
@@ -199,11 +207,11 @@ export function MonthlyEBITA() {
       {([['pnl','Profit & Loss'],['vehicle','Vehicle Performance'],['freight','Freight Difference']] as const).map(([key,label])=><button key={key} role="tab" aria-selected={scheduleTab===key} className={scheduleTab===key?'btn-primary h-9':'btn-ghost h-9'} onClick={()=>setScheduleTab(key)}>{label}</button>)}
     </div>
     {scheduleTab==='vehicle'&&<Card title={'Vehicle Performance — '+current.key} subtitle="Trip-based vehicle results from ERP revenue and trip expenses. Not a complete net profit: salaries, fixed charges and unlinked bills are excluded.">
-      <div className="flex justify-end mb-3"><button className="btn-ghost" onClick={()=>printSchedule('Vehicle Performance',current.key,['Vehicle','Trips','Days','Billed revenue','Trip expenses','Provisional difference','Unbilled trips'],vehicleRows.map(r=>[r.vehicle,String(r.trips),String(r.days),inr(r.revenue),inr(r.costs),inr(r.result),String(r.missing)]),'PROVISIONAL: Unbilled trips, fixed costs and overheads are not included. Do not treat as verified vehicle profit.')}>Print / PDF</button></div>
+      <div className="flex justify-end gap-2 mb-3"><button className="btn-ghost" onClick={()=>exportScheduleCsv('vehicle-performance-'+current.key+'.csv',['Vehicle','Trips','Days','Billed revenue','Trip expenses','Provisional difference','Unbilled trips'],vehicleRows.map(r=>[r.vehicle,String(r.trips),String(r.days),String(r.revenue),String(r.costs),String(r.result),String(r.missing)]))}>Export CSV</button><button className="btn-ghost" onClick={()=>printSchedule('Vehicle Performance',current.key,['Vehicle','Trips','Days','Billed revenue','Trip expenses','Provisional difference','Unbilled trips'],vehicleRows.map(r=>[r.vehicle,String(r.trips),String(r.days),inr(r.revenue),inr(r.costs),inr(r.result),String(r.missing)]),'PROVISIONAL: Unbilled trips, fixed costs and overheads are not included. Do not treat as verified vehicle profit.')}>Print / PDF</button></div>
       <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-sm"><thead><tr className="border-b border-line">{['Vehicle','Trips','Days','Billed revenue','Trip expenses','Provisional difference','Unbilled trips'].map(h=><th key={h} className="p-2 text-right first:text-left">{h}</th>)}</tr></thead><tbody>{vehicleRows.map(r=><tr key={r.id} className="border-b border-line"><td className="p-2">{r.vehicle}</td><td className="p-2 text-right">{r.trips}</td><td className="p-2 text-right">{r.days}</td><td className="p-2 text-right">{inr(r.revenue)}</td><td className="p-2 text-right">{inr(r.costs)}</td><td className="p-2 text-right">{inr(r.result)}</td><td className="p-2 text-right">{r.missing}</td></tr>)}</tbody></table>{vehicleRows.length===0&&<p className="p-3 text-muted">No vehicle trips found in this month.</p>}</div>
     </Card>}
     {scheduleTab==='freight'&&<Card title={'Freight Difference — '+current.key} subtitle="LR booking amount less recorded onward freight. A missing onward cost is left unreconciled, never counted as zero.">
-      <div className="flex justify-end mb-3"><button className="btn-ghost" onClick={()=>printSchedule('Freight Difference',current.key,['LR No.','Date','Booking','Onward freight','Difference','Source'],freightRows.map(r=>[r.lrNo,r.date,inr(r.booking),r.onward===null?'Not recorded':inr(r.onward),r.difference===null?'Unreconciled':inr(r.difference),r.source]),'ERP-DERIVED: Verify the freight source before treating this schedule as a final signed accounting report.')}>Print / PDF</button></div>
+      <div className="flex justify-end gap-2 mb-3"><button className="btn-ghost" onClick={()=>exportScheduleCsv('freight-difference-'+current.key+'.csv',['LR No.','Date','Booking','Onward freight','Difference','Source'],freightRows.map(r=>[r.lrNo,r.date,String(r.booking),r.onward===null?'Not recorded':String(r.onward),r.difference===null?'Unreconciled':String(r.difference),r.source]))}>Export CSV</button><button className="btn-ghost" onClick={()=>printSchedule('Freight Difference',current.key,['LR No.','Date','Booking','Onward freight','Difference','Source'],freightRows.map(r=>[r.lrNo,r.date,inr(r.booking),r.onward===null?'Not recorded':inr(r.onward),r.difference===null?'Unreconciled':inr(r.difference),r.source]),'ERP-DERIVED: Verify the freight source before treating this schedule as a final signed accounting report.')}>Print / PDF</button></div>
       <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-sm"><thead><tr className="border-b border-line">{['LR No.','Date','Booking amount','Onward freight','Difference','Source'].map(h=><th key={h} className="p-2 text-right first:text-left">{h}</th>)}</tr></thead><tbody>{freightRows.map(r=><tr key={r.id} className="border-b border-line"><td className="p-2">{r.lrNo}</td><td className="p-2 text-right">{r.date}</td><td className="p-2 text-right">{inr(r.booking)}</td><td className="p-2 text-right">{r.onward===null?'Not recorded':inr(r.onward)}</td><td className="p-2 text-right">{r.difference===null?'Unreconciled':inr(r.difference)}</td><td className="p-2 text-right">{r.source}</td></tr>)}</tbody></table>{freightRows.length===0&&<p className="p-3 text-muted">No road LRs found in this month.</p>}</div>
       <p className="text-xs text-muted mt-3">Reconciled booking: {inr(freightRows.filter(r=>r.difference!==null).reduce((s,r)=>s+r.booking,0))} · Onward freight: {inr(freightRows.reduce((s,r)=>s+(r.onward||0),0))} · Difference: {inr(freightRows.reduce((s,r)=>s+(r.difference||0),0))} · Unreconciled LRs: {freightRows.filter(r=>r.difference===null).length}</p>
     </Card>}
